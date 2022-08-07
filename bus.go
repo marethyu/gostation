@@ -7,8 +7,9 @@ import (
 )
 
 type Bus struct {
-	Core *GoStationCore
-	Bios Access
+	Core           *GoStationCore
+	Bios           Access
+	MemoryControl1 *MemoryControl1
 }
 
 func NewBus(core *GoStationCore, pathToBios string) *Bus {
@@ -17,7 +18,11 @@ func NewBus(core *GoStationCore, pathToBios string) *Bus {
 		log.Fatal("Unable to read BIOS: ", err)
 	}
 
-	return &Bus{core, NewMemory(bios, 0xbfc00000, 1024*512)}
+	return &Bus{
+		core,
+		NewMemory(bios, 0xbfc00000, 1024*512),
+		NewMemoryControl1(),
+	}
 }
 
 func (bus *Bus) Read8(address uint32) uint8 {
@@ -45,13 +50,28 @@ func (bus *Bus) Read32(address uint32) uint32 {
 }
 
 func (bus *Bus) Write8(address uint32, data uint8) {
-	//
+	panic(fmt.Sprintf("[Bus::Write8] Can't write data %x into this address: %x", data, address))
 }
 
 func (bus *Bus) Write16(address uint32, data uint16) {
-	//
+	panic(fmt.Sprintf("[Bus::Write16] Can't write data %x into this address: %x", data, address))
 }
 
 func (bus *Bus) Write32(address uint32, data uint32) {
-	panic(fmt.Sprintf("[Bus::Write32] Can't write data into this address: %x", address))
+	if bus.MemoryControl1.Contains(address) {
+		bus.MemoryControl1.Write32(address, data)
+		return
+	}
+
+	if address == 0x1f801060 {
+		// Ignore the RAM_SIZE register for now
+		return
+	}
+
+	if address == 0xfffe0130 {
+		// Ignore the cache kontrol register for now
+		return
+	}
+
+	panic(fmt.Sprintf("[Bus::Write32] Can't write data %x into this address: %x", data, address))
 }

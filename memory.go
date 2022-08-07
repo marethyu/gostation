@@ -8,7 +8,12 @@ type Memory struct {
 }
 
 func NewMemory(data []uint8, offset uint32, size uint32) *Memory {
-	return &Memory{data, offset, size, size - 1}
+	return &Memory{
+		data,
+		offset,
+		size,
+		size - 1,
+	}
 }
 
 func (mem *Memory) Contains(address uint32) bool {
