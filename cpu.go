@@ -16,6 +16,12 @@ type CPU struct {
 	/* necessary for branch delay slot */
 	next_pc uint32
 
+	/* necessary for load delay slot */
+	pending_load   bool
+	pending_r      int
+	pending_val    uint32
+	load_countdown int
+
 	/* COP0 system status */
 	sr uint32
 }
@@ -28,6 +34,10 @@ func NewCPU(core *GoStationCore) *CPU {
 		0,
 		0,
 		0xbfc00004,
+		false,
+		0,
+		0,
+		0,
 		0,
 	}
 }
@@ -37,6 +47,14 @@ func (cpu *CPU) Step() {
 
 	cpu.pc = cpu.next_pc
 	cpu.next_pc += 4
+
+	if cpu.pending_load {
+		cpu.load_countdown -= 1
+		if cpu.load_countdown == 0 {
+			cpu.modifyReg(cpu.pending_r, cpu.pending_val)
+			cpu.pending_load = false
+		}
+	}
 
 	cpu.ExecutePrimaryOpcode(opcode)
 }
@@ -60,6 +78,8 @@ func (cpu *CPU) ExecutePrimaryOpcode(opcode uint32) {
 		cpu.OpORI(opcode)
 	case 0x0f:
 		cpu.OpLUI(opcode)
+	case 0x23:
+		cpu.OpLoadWord(opcode)
 	case 0x2b:
 		cpu.OpStoreWord(opcode)
 	case 0b010000:
@@ -75,8 +95,12 @@ func (cpu *CPU) ExecuteSecondaryOpcode(opcode uint32) {
 	switch op {
 	case 0x00:
 		cpu.OpSLL(opcode)
+	case 0x21:
+		cpu.OpADDU(opcode)
 	case 0x25:
 		cpu.OpOR(opcode)
+	case 0x2b:
+		cpu.OpSLTU(opcode)
 	default:
 		panic(fmt.Sprintf("[CPU::ExecuteSecondaryOpcode] Unknown Opcode: %x", opcode))
 	}
@@ -96,6 +120,11 @@ func (cpu *CPU) ExecuteCop0Opcode(opcode uint32) {
 func (cpu *CPU) modifyReg(i int, v uint32) {
 	cpu.r[i] = v
 	cpu.r[0] = 0 // R0 is always zero
+
+	if cpu.pending_load && cpu.pending_r == i {
+		// Uh well... never mind the load
+		cpu.pending_load = false
+	}
 }
 
 func (cpu *CPU) reg(i int) uint32 {

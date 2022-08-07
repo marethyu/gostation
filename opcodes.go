@@ -110,6 +110,32 @@ func (cpu *CPU) OpLUI(opcode uint32) {
 //
 //	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
 //
+// 100xxx | rs   | rt   | <--immediate16bit--> | load rt,[rs+imm]
+// lw  rt,imm(rs)    rt=[imm+rs]  ;word
+func (cpu *CPU) OpLoadWord(opcode uint32) {
+	if TestBit(cpu.sr, 16) {
+		// Ignore write when cache is isolated
+		return
+	}
+
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	addr := cpu.reg(rs) + imm16
+	val := cpu.Core.Bus.Read32(addr)
+
+	// Loads have delay
+	cpu.pending_load = true
+	cpu.pending_r = rt
+	cpu.pending_val = val
+	cpu.load_countdown = 2
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
 // 101xxx | rs   | rt   | <--immediate16bit--> | store rt,[rs+imm]
 // sw  rt,imm(rs)    [imm+rs]=rt             ;store 32bit
 func (cpu *CPU) OpStoreWord(opcode uint32) {
@@ -151,6 +177,21 @@ func (cpu *CPU) OpSLL(opcode uint32) {
 //	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
 //
 // 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
+// addu  rd,rs,rt         rd=rs+rt
+func (cpu *CPU) OpADDU(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	val := cpu.reg(rs) + cpu.reg(rt)
+	cpu.modifyReg(rd, val)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
 // or   rd,rs,rt         rd = rs OR  rt
 func (cpu *CPU) OpOR(opcode uint32) {
 	rd := int(GetValue(opcode, 11, 5))
@@ -159,6 +200,25 @@ func (cpu *CPU) OpOR(opcode uint32) {
 
 	val := cpu.reg(rs) | cpu.reg(rt)
 	cpu.modifyReg(rd, val)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
+// setb  sltu  rd,rs,rt  if rs<rt then rd=1 else rd=0 (unsigned)
+func (cpu *CPU) OpSLTU(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	test := cpu.reg(rs) < cpu.reg(rt)
+	if test {
+		cpu.modifyReg(rd, 1)
+	} else {
+		cpu.modifyReg(rd, 0)
+	}
 }
 
 /*
@@ -177,8 +237,16 @@ func (cpu *CPU) OpMTC0(opcode uint32) {
 
 	val := cpu.reg(rt)
 	switch rd {
+	case 3, 5, 6, 7, 9, 11:
+		if val != 0 {
+			panic("[CPU::OpMTC0] The breakpoint registers are implemented yet!")
+		}
 	case 12:
 		cpu.sr = val
+	case 13:
+		if val != 0 {
+			panic("[CPU::OpMTC0] The cause register is not implemented yet!")
+		}
 	default:
 		panic(fmt.Sprintf("[CPU::OpMTC0] Unsupported COP0 register: %x", rd))
 	}
