@@ -21,6 +21,10 @@ func GetValue(n uint32, pos int, len int) uint32 {
 	return (n >> pos) & ((1 << len) - 1)
 }
 
+func SignExtendedByte(n uint8) uint32 {
+	return uint32(int8(n))
+}
+
 func SignExtendedWord(n uint32) uint32 {
 	return uint32(int16(n))
 }

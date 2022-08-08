@@ -66,20 +66,42 @@ func (cpu *CPU) ExecutePrimaryOpcode(opcode uint32) {
 	switch op {
 	case 0x00:
 		cpu.ExecuteSecondaryOpcode(opcode)
+	case 0x01:
+		cpu.OpBcondZ(opcode)
 	case 0x02:
 		cpu.OpJump(opcode)
+	case 0x03:
+		cpu.OpJAL(opcode)
+	case 0x04:
+		cpu.OpBEQ(opcode)
 	case 0x05:
 		cpu.OpBNE(opcode)
+	case 0x06:
+		cpu.OpBLEZ(opcode)
+	case 0x07:
+		cpu.OpBGTZ(opcode)
 	case 0x08:
 		cpu.OpADDI(opcode)
 	case 0x09:
 		cpu.OpADDIU(opcode)
+	case 0x0a:
+		cpu.OpSLTI(opcode)
+	case 0x0c:
+		cpu.OpANDI(opcode)
 	case 0x0d:
 		cpu.OpORI(opcode)
 	case 0x0f:
 		cpu.OpLUI(opcode)
+	case 0x20:
+		cpu.OpLoadByte(opcode)
 	case 0x23:
 		cpu.OpLoadWord(opcode)
+	case 0x24:
+		cpu.OpLoadByteU(opcode)
+	case 0x28:
+		cpu.OpStoreByte(opcode)
+	case 0x29:
+		cpu.OpStoreHWord(opcode)
 	case 0x2b:
 		cpu.OpStoreWord(opcode)
 	case 0b010000:
@@ -95,8 +117,20 @@ func (cpu *CPU) ExecuteSecondaryOpcode(opcode uint32) {
 	switch op {
 	case 0x00:
 		cpu.OpSLL(opcode)
+	case 0x03:
+		cpu.OpSRA(opcode)
+	case 0x08:
+		cpu.OpJR(opcode)
+	case 0x09:
+		cpu.OpJALR(opcode)
+	case 0x20:
+		cpu.OpADD(opcode)
 	case 0x21:
 		cpu.OpADDU(opcode)
+	case 0x23:
+		cpu.OpSUBU(opcode)
+	case 0x24:
+		cpu.OpAND(opcode)
 	case 0x25:
 		cpu.OpOR(opcode)
 	case 0x2b:
@@ -110,6 +144,8 @@ func (cpu *CPU) ExecuteCop0Opcode(opcode uint32) {
 	op := GetValue(opcode, 21, 5)
 
 	switch op {
+	case 0b00000:
+		cpu.OpMFC0(opcode)
 	case 0b00100:
 		cpu.OpMTC0(opcode)
 	default:
@@ -129,6 +165,17 @@ func (cpu *CPU) modifyReg(i int, v uint32) {
 
 func (cpu *CPU) reg(i int) uint32 {
 	return cpu.r[i]
+}
+
+func (cpu *CPU) loadDelayInit(i int, v uint32) {
+	if cpu.pending_load {
+		cpu.modifyReg(cpu.pending_r, cpu.pending_val)
+	}
+
+	cpu.pending_load = true
+	cpu.pending_r = i
+	cpu.pending_val = v
+	cpu.load_countdown = 2
 }
 
 func (cpu *CPU) branch(imm16 uint32) {
