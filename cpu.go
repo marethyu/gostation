@@ -59,14 +59,19 @@ func (cpu *CPU) Step() {
 	}
 }
 
-func (cpu *CPU) Log() {
-	for i := 0; i < 8; i++ {
-		r := i * 4
-		fmt.Printf("r%d=%08x r%d=%08x r%d=%08x r%d=%08x\n", r, cpu.r[r], r+1, cpu.r[r+1], r+2, cpu.r[r+2], r+3, cpu.r[r+3])
+func (cpu *CPU) Log(logRegisters bool) {
+	if logRegisters {
+		fmt.Println()
+		for i := 0; i < 8; i++ {
+			r := i * 4
+			fmt.Printf("r%d=%08x r%d=%08x r%d=%08x r%d=%08x\n", r, cpu.r[r], r+1, cpu.r[r+1], r+2, cpu.r[r+2], r+3, cpu.r[r+3])
+		}
+		fmt.Printf("hi=%08x lo=%08x\n", cpu.hi, cpu.lo)
 	}
 
-	fmt.Printf("hi=%08x lo=%08x\n", cpu.hi, cpu.lo)
-	fmt.Printf("[pc=%08x]=%08x\n\n", cpu.pc, cpu.Core.Bus.Read32(cpu.pc))
+	fmt.Printf("[%08x]    ", cpu.pc)
+	cpu.DisassemblePrimaryOpcode(cpu.Core.Bus.Read32(cpu.pc))
+	fmt.Println()
 }
 
 /* Refer to this page https://psx-spx.consoledev.net/cpuspecifications/#cpu-opcode-encoding for all opcodes and its encodings */
