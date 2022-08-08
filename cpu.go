@@ -48,6 +48,8 @@ func (cpu *CPU) Step() {
 	cpu.pc = cpu.next_pc
 	cpu.next_pc += 4
 
+	cpu.ExecutePrimaryOpcode(opcode)
+
 	if cpu.pending_load {
 		cpu.load_countdown -= 1
 		if cpu.load_countdown == 0 {
@@ -55,8 +57,17 @@ func (cpu *CPU) Step() {
 			cpu.pending_load = false
 		}
 	}
+}
 
-	cpu.ExecutePrimaryOpcode(opcode)
+func (cpu *CPU) Log() {
+	for i := 0; i < 8; i++ {
+		r := i * 4
+		fmt.Printf("r%02d=%08x r%02d=%08x r%02d=%08x r%02d=%08x\n", r, cpu.r[r], r+1, cpu.r[r+1], r+2, cpu.r[r+2], r+3, cpu.r[r+3])
+	}
+
+	fmt.Printf("hi=%08x lo=%08x\n", cpu.hi, cpu.lo)
+	fmt.Printf("pc=%08x\n", cpu.pc)
+	fmt.Printf("[pc]=%08x\n\n", cpu.Core.Bus.Read32(cpu.pc))
 }
 
 /* Refer to this page https://psx-spx.consoledev.net/cpuspecifications/#cpu-opcode-encoding for all opcodes and its encodings */
@@ -86,6 +97,8 @@ func (cpu *CPU) ExecutePrimaryOpcode(opcode uint32) {
 		cpu.OpADDIU(opcode)
 	case 0x0a:
 		cpu.OpSLTI(opcode)
+	case 0x0b:
+		cpu.OpSLTIU(opcode)
 	case 0x0c:
 		cpu.OpANDI(opcode)
 	case 0x0d:
@@ -117,12 +130,22 @@ func (cpu *CPU) ExecuteSecondaryOpcode(opcode uint32) {
 	switch op {
 	case 0x00:
 		cpu.OpSLL(opcode)
+	case 0x02:
+		cpu.OpSRL(opcode)
 	case 0x03:
 		cpu.OpSRA(opcode)
 	case 0x08:
 		cpu.OpJR(opcode)
 	case 0x09:
 		cpu.OpJALR(opcode)
+	case 0x10:
+		cpu.OpMFHI(opcode)
+	case 0x12:
+		cpu.OpMFLO(opcode)
+	case 0x1a:
+		cpu.OpDIV(opcode)
+	case 0x1b:
+		cpu.OpDIVU(opcode)
 	case 0x20:
 		cpu.OpADD(opcode)
 	case 0x21:
@@ -133,6 +156,8 @@ func (cpu *CPU) ExecuteSecondaryOpcode(opcode uint32) {
 		cpu.OpAND(opcode)
 	case 0x25:
 		cpu.OpOR(opcode)
+	case 0x2a:
+		cpu.OpSLT(opcode)
 	case 0x2b:
 		cpu.OpSLTU(opcode)
 	default:

@@ -28,7 +28,7 @@ func (cpu *CPU) OpBcondZ(opcode uint32) {
 	cond := GetValue(opcode, 16, 5)
 	rs := int(GetValue(opcode, 21, 5))
 
-	val := cpu.reg(rs)
+	val := int32(cpu.reg(rs))
 
 	var test bool
 	var link bool
@@ -199,6 +199,26 @@ func (cpu *CPU) OpSLTI(opcode uint32) {
 
 	val := int32(cpu.reg(rs))
 	test := val < int32(imm16)
+	if test {
+		cpu.modifyReg(rt, 1)
+	} else {
+		cpu.modifyReg(rt, 0)
+	}
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 001xxx | rs   | rt   | <--immediate16bit--> | alu-imm
+// setb  sltiu rt,rs,imm if rs<(FFFF8000h..7FFFh) then rt=1 else rt=0(unsigned)
+func (cpu *CPU) OpSLTIU(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	val := cpu.reg(rs)
+	test := val < imm16
 	if test {
 		cpu.modifyReg(rt, 1)
 	} else {
@@ -403,6 +423,21 @@ func (cpu *CPU) OpSLL(opcode uint32) {
 //	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
 //
 // 000000 | N/A  | rt   | rd   | imm5 | 0000xx | shift-imm
+// srl  rd,rt,imm         rd = rt SHR (00h..1Fh)
+func (cpu *CPU) OpSRL(opcode uint32) {
+	imm5 := GetValue(opcode, 6, 5)
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
+
+	val := cpu.reg(rt) >> imm5
+	cpu.modifyReg(rd, val)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | N/A  | rt   | rd   | imm5 | 0000xx | shift-imm
 // sra  rd,rt,imm         rd = rt SAR (00h..1Fh)
 func (cpu *CPU) OpSRA(opcode uint32) {
 	imm5 := GetValue(opcode, 6, 5)
@@ -437,6 +472,84 @@ func (cpu *CPU) OpJALR(opcode uint32) {
 
 	cpu.modifyReg(rd, cpu.next_pc) // store the return address in rd
 	cpu.next_pc = cpu.reg(rs)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | N/A  | N/A  | rd   | N/A  | 0100x0 | mfhi/mflo
+// mfhi   rd              rd=hi  ;move from hi
+func (cpu *CPU) OpMFHI(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
+
+	cpu.modifyReg(rd, cpu.hi)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | N/A  | N/A  | rd   | N/A  | 0100x0 | mfhi/mflo
+// mflo   rd              rd=lo  ;move from lo
+func (cpu *CPU) OpMFLO(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
+
+	cpu.modifyReg(rd, cpu.lo)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | rs   | rt   | N/A  | N/A  | 0110xx | mul/div
+// div    rs,rt           lo = rs/rt, hi=rs mod rt (signed)
+// TODO timing
+func (cpu *CPU) OpDIV(opcode uint32) {
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	a := int32(cpu.reg(rs))
+	b := int32(cpu.reg(rt))
+
+	if b == 0 {
+		cpu.hi = uint32(a)
+
+		if a >= 0 {
+			cpu.lo = 0xffffffff
+		} else {
+			cpu.lo = 1
+		}
+	} else if uint32(a) == 0x80000000 && b == -1 {
+		cpu.hi = 0
+		cpu.lo = 0x80000000
+	} else {
+		cpu.hi = uint32(a % b)
+		cpu.lo = uint32(a / b)
+	}
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | rs   | rt   | N/A  | N/A  | 0110xx | mul/div
+// divu   rs,rt           lo = rs/rt, hi=rs mod rt (unsigned)
+// TODO timing
+func (cpu *CPU) OpDIVU(opcode uint32) {
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	a := cpu.reg(rs)
+	b := cpu.reg(rt)
+
+	if b == 0 {
+		cpu.hi = a
+		cpu.lo = 0xffffffff
+	} else {
+		cpu.hi = a % b
+		cpu.lo = a / b
+	}
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -519,6 +632,25 @@ func (cpu *CPU) OpOR(opcode uint32) {
 
 	val := cpu.reg(rs) | cpu.reg(rt)
 	cpu.modifyReg(rd, val)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
+// setlt slt   rd,rs,rt  if rs<rt then rd=1 else rd=0 (signed)
+func (cpu *CPU) OpSLT(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	test := int32(cpu.reg(rs)) < int32(cpu.reg(rt))
+	if test {
+		cpu.modifyReg(rd, 1)
+	} else {
+		cpu.modifyReg(rd, 0)
+	}
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |

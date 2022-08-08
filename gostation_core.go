@@ -15,5 +15,6 @@ func NewCore(pathToBios string) *GoStationCore {
 }
 
 func (core *GoStationCore) Step() {
+	//core.CPU.Log()
 	core.CPU.Step()
 }
