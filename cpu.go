@@ -14,7 +14,9 @@ type CPU struct {
 	lo uint32
 
 	/* necessary for branch delay slot */
-	next_pc uint32
+	next_pc     uint32
+	isBranch    bool /* true if branch or jump occured */
+	isDelaySlot bool /* (if branch is success) true if instruction is branch delay slot */
 
 	/* necessary for load delay slot */
 	pending_load   bool
@@ -22,8 +24,14 @@ type CPU struct {
 	pending_val    uint32
 	load_countdown int
 
-	/* COP0 system status */
+	/* cop0r12 - SR - System status register (R/W) */
 	sr uint32
+	/* cop0r13 - CAUSE - (R)  Describes the most recently recognised exception */
+	cause uint32
+	/* cop0r14 - EPC - Return Address from Trap */
+	epc uint32
+
+	current_pc uint32
 }
 
 func NewCPU(core *GoStationCore) *CPU {
@@ -35,6 +43,11 @@ func NewCPU(core *GoStationCore) *CPU {
 		0,
 		0xbfc00004,
 		false,
+		false,
+		false,
+		0,
+		0,
+		0,
 		0,
 		0,
 		0,
@@ -43,10 +56,17 @@ func NewCPU(core *GoStationCore) *CPU {
 }
 
 func (cpu *CPU) Step() {
+	cpu.current_pc = cpu.pc
+	if cpu.current_pc%4 != 0 {
+		cpu.enterException(EXC_ADDR_ERROR_LOAD)
+	}
 	opcode := cpu.Core.Bus.Read32(cpu.pc)
 
 	cpu.pc = cpu.next_pc
 	cpu.next_pc += 4
+
+	cpu.isDelaySlot = cpu.isBranch
+	cpu.isBranch = false
 
 	cpu.ExecutePrimaryOpcode(opcode)
 
@@ -142,10 +162,16 @@ func (cpu *CPU) ExecuteSecondaryOpcode(opcode uint32) {
 		cpu.OpJR(opcode)
 	case 0x09:
 		cpu.OpJALR(opcode)
+	case 0x0c:
+		cpu.OpSYS(opcode)
 	case 0x10:
 		cpu.OpMFHI(opcode)
+	case 0x11:
+		cpu.OpMTHI(opcode)
 	case 0x12:
 		cpu.OpMFLO(opcode)
+	case 0x13:
+		cpu.OpMTLO(opcode)
 	case 0x1a:
 		cpu.OpDIV(opcode)
 	case 0x1b:
@@ -177,6 +203,8 @@ func (cpu *CPU) ExecuteCop0Opcode(opcode uint32) {
 		cpu.OpMFC0(opcode)
 	case 0b00100:
 		cpu.OpMTC0(opcode)
+	case 0b10000:
+		cpu.OpRFE(opcode)
 	default:
 		panic(fmt.Sprintf("[CPU::ExecuteCop0Opcode] Unknown Opcode: %x", opcode))
 	}
@@ -209,4 +237,5 @@ func (cpu *CPU) loadDelayInit(i int, v uint32) {
 
 func (cpu *CPU) branch(imm16 uint32) {
 	cpu.next_pc = cpu.pc + (imm16 << 2)
+	cpu.isBranch = true
 }

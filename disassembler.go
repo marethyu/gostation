@@ -71,10 +71,16 @@ func (cpu *CPU) DisassembleSecondaryOpcode(opcode uint32) {
 		cpu.DisOpJR(opcode)
 	case 0x09:
 		cpu.DisOpJALR(opcode)
+	case 0x0c:
+		cpu.DisOpSYS(opcode)
 	case 0x10:
 		cpu.DisOpMFHI(opcode)
+	case 0x11:
+		cpu.DisOpMTHI(opcode)
 	case 0x12:
 		cpu.DisOpMFLO(opcode)
+	case 0x13:
+		cpu.DisOpMTLO(opcode)
 	case 0x1a:
 		cpu.DisOpDIV(opcode)
 	case 0x1b:
@@ -106,6 +112,8 @@ func (cpu *CPU) DisassembleCop0Opcode(opcode uint32) {
 		cpu.DisOpMFC0(opcode)
 	case 0b00100:
 		cpu.DisOpMTC0(opcode)
+	case 0b10000:
+		cpu.DisOpRFE(opcode)
 	default:
 		panic(fmt.Sprintf("[CPU::DisassembleCop0Opcode] Unknown Opcode: %x", opcode))
 	}
@@ -123,10 +131,10 @@ func (cpu *CPU) DisassembleCop0Opcode(opcode uint32) {
 // bgez   rs,dest     if rs>=0  then pc=$+4+(-8000h..+7FFFh)*4
 // bltzal rs,dest     if rs<0   then pc=$+4+(..)*4, ra=$+8
 // bgezal rs,dest     if rs>=0  then pc=$+4+(..)*4, ra=$+8
-func (cpu *CPU) DisOpBcondZ(DisOpcode uint32) {
-	imm16 := SignExtendedWord(GetValue(DisOpcode, 0, 16))
-	cond := GetValue(DisOpcode, 16, 5)
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpBcondZ(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	cond := GetValue(opcode, 16, 5)
+	rs := int(GetValue(opcode, 21, 5))
 
 	switch cond {
 	case 0b00000:
@@ -148,8 +156,8 @@ func (cpu *CPU) DisOpBcondZ(DisOpcode uint32) {
 //
 // 00001x | <---------immediate26bit---------> | j/jal
 // j      dest        pc=(pc and F0000000h)+(imm26bit*4)
-func (cpu *CPU) DisOpJump(DisOpcode uint32) {
-	imm26 := GetValue(DisOpcode, 0, 26)
+func (cpu *CPU) DisOpJump(opcode uint32) {
+	imm26 := GetValue(opcode, 0, 26)
 
 	fmt.Printf("%-7s %08x", "j", imm26)
 }
@@ -160,8 +168,8 @@ func (cpu *CPU) DisOpJump(DisOpcode uint32) {
 //
 // 00001x | <---------immediate26bit---------> | j/jal
 // jal    dest        pc=(pc and F0000000h)+(imm26bit*4),ra=$+8
-func (cpu *CPU) DisOpJAL(DisOpcode uint32) {
-	imm26 := GetValue(DisOpcode, 0, 26)
+func (cpu *CPU) DisOpJAL(opcode uint32) {
+	imm26 := GetValue(opcode, 0, 26)
 
 	fmt.Printf("%-7s %08x", "jal", imm26)
 }
@@ -172,10 +180,10 @@ func (cpu *CPU) DisOpJAL(DisOpcode uint32) {
 //
 // 00010x | rs   | rt   | <--immediate16bit--> | beq/bne
 // beq    rs,rt,dest  if rs=rt  then pc=$+4+(-8000h..+7FFFh)*4
-func (cpu *CPU) DisOpBEQ(DisOpcode uint32) {
-	imm16 := SignExtendedWord(GetValue(DisOpcode, 0, 16))
-	rt := int(GetValue(DisOpcode, 16, 5))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpBEQ(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,r%d,%08x", "beq", rs, rt, imm16)
 }
@@ -186,10 +194,10 @@ func (cpu *CPU) DisOpBEQ(DisOpcode uint32) {
 //
 // 00010x | rs   | rt   | <--immediate16bit--> | beq/bne
 // bne    rs,rt,dest  if rs<>rt then pc=$+4+(-8000h..+7FFFh)*4
-func (cpu *CPU) DisOpBNE(DisOpcode uint32) {
-	imm16 := SignExtendedWord(GetValue(DisOpcode, 0, 16))
-	rt := int(GetValue(DisOpcode, 16, 5))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpBNE(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,r%d,%08x", "bne", rs, rt, imm16)
 }
@@ -200,9 +208,9 @@ func (cpu *CPU) DisOpBNE(DisOpcode uint32) {
 //
 // 00011x | rs   | N/A  | <--immediate16bit--> | blez/bgtz
 // blez   rs,dest     if rs<=0  then pc=$+4+(-8000h..+7FFFh)*4
-func (cpu *CPU) DisOpBLEZ(DisOpcode uint32) {
-	imm16 := SignExtendedWord(GetValue(DisOpcode, 0, 16))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpBLEZ(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,%08x", "blez", rs, imm16)
 }
@@ -213,9 +221,9 @@ func (cpu *CPU) DisOpBLEZ(DisOpcode uint32) {
 //
 // 00011x | rs   | N/A  | <--immediate16bit--> | blez/bgtz
 // bgtz   rs,dest     if rs>0   then pc=$+4+(-8000h..+7FFFh)*4
-func (cpu *CPU) DisOpBGTZ(DisOpcode uint32) {
-	imm16 := SignExtendedWord(GetValue(DisOpcode, 0, 16))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpBGTZ(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,%08x", "bgtz", rs, imm16)
 }
@@ -226,10 +234,10 @@ func (cpu *CPU) DisOpBGTZ(DisOpcode uint32) {
 //
 // 001xxx | rs   | rt   | <--immediate16bit--> | alu-imm
 // addi  rt,rs,imm        rt=rs+(-8000h..+7FFFh) (with ov.trap)
-func (cpu *CPU) DisOpADDI(DisOpcode uint32) {
-	imm16 := SignExtendedWord(GetValue(DisOpcode, 0, 16))
-	rt := int(GetValue(DisOpcode, 16, 5))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpADDI(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,r%d,%08x", "addi", rt, rs, imm16)
 }
@@ -240,10 +248,10 @@ func (cpu *CPU) DisOpADDI(DisOpcode uint32) {
 //
 // 001xxx | rs   | rt   | <--immediate16bit--> | alu-imm
 // addiu rt,rs,imm        rt=rs+(-8000h..+7FFFh)
-func (cpu *CPU) DisOpADDIU(DisOpcode uint32) {
-	imm16 := SignExtendedWord(GetValue(DisOpcode, 0, 16))
-	rt := int(GetValue(DisOpcode, 16, 5))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpADDIU(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,r%d,%08x", "addiu", rt, rs, imm16)
 }
@@ -254,10 +262,10 @@ func (cpu *CPU) DisOpADDIU(DisOpcode uint32) {
 //
 // 001xxx | rs   | rt   | <--immediate16bit--> | alu-imm
 // setlt slti  rt,rs,imm if rs<(-8000h..+7FFFh)  then rt=1 else rt=0 (signed)
-func (cpu *CPU) DisOpSLTI(DisOpcode uint32) {
-	imm16 := SignExtendedWord(GetValue(DisOpcode, 0, 16))
-	rt := int(GetValue(DisOpcode, 16, 5))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpSLTI(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,r%d,%08x", "slti", rt, rs, imm16)
 }
@@ -268,10 +276,10 @@ func (cpu *CPU) DisOpSLTI(DisOpcode uint32) {
 //
 // 001xxx | rs   | rt   | <--immediate16bit--> | alu-imm
 // setb  sltiu rt,rs,imm if rs<(FFFF8000h..7FFFh) then rt=1 else rt=0(unsigned)
-func (cpu *CPU) DisOpSLTIU(DisOpcode uint32) {
-	imm16 := SignExtendedWord(GetValue(DisOpcode, 0, 16))
-	rt := int(GetValue(DisOpcode, 16, 5))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpSLTIU(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,r%d,%08x", "sltiu", rt, rs, imm16)
 }
@@ -282,10 +290,10 @@ func (cpu *CPU) DisOpSLTIU(DisOpcode uint32) {
 //
 // 001xxx | rs   | rt   | <--immediate16bit--> | alu-imm
 // andi rt,rs,imm        rt = rs AND (0000h..FFFFh)
-func (cpu *CPU) DisOpANDI(DisOpcode uint32) {
-	imm16 := GetValue(DisOpcode, 0, 16)
-	rt := int(GetValue(DisOpcode, 16, 5))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpANDI(opcode uint32) {
+	imm16 := GetValue(opcode, 0, 16)
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,r%d,%08x", "andi", rt, rs, imm16)
 }
@@ -296,10 +304,10 @@ func (cpu *CPU) DisOpANDI(DisOpcode uint32) {
 //
 // 001xxx | rs   | rt   | <--immediate16bit--> | alu-imm
 // ori  rt,rs,imm        rt = rs OR  (0000h..FFFFh)
-func (cpu *CPU) DisOpORI(DisOpcode uint32) {
-	imm16 := GetValue(DisOpcode, 0, 16)
-	rt := int(GetValue(DisOpcode, 16, 5))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpORI(opcode uint32) {
+	imm16 := GetValue(opcode, 0, 16)
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,r%d,%08x", "ori", rt, rs, imm16)
 }
@@ -310,9 +318,9 @@ func (cpu *CPU) DisOpORI(DisOpcode uint32) {
 //
 // 001111 | N/A  | rt   | <--immediate16bit--> | lui-imm
 // lui  rt,imm            rt = (0000h..FFFFh) SHL 16
-func (cpu *CPU) DisOpLUI(DisOpcode uint32) {
-	imm16 := GetValue(DisOpcode, 0, 16)
-	rt := int(GetValue(DisOpcode, 16, 5))
+func (cpu *CPU) DisOpLUI(opcode uint32) {
+	imm16 := GetValue(opcode, 0, 16)
+	rt := int(GetValue(opcode, 16, 5))
 
 	fmt.Printf("%-7s r%d,%08x", "lui", rt, imm16)
 }
@@ -323,10 +331,10 @@ func (cpu *CPU) DisOpLUI(DisOpcode uint32) {
 //
 // 100xxx | rs   | rt   | <--immediate16bit--> | load rt,[rs+imm]
 // lb  rt,imm(rs)    rt=[imm+rs]  ;byte sign-extended
-func (cpu *CPU) DisOpLoadByte(DisOpcode uint32) {
-	imm16 := SignExtendedWord(GetValue(DisOpcode, 0, 16))
-	rt := int(GetValue(DisOpcode, 16, 5))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpLoadByte(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,%08x(r%d)", "lb", rt, imm16, rs)
 }
@@ -337,10 +345,10 @@ func (cpu *CPU) DisOpLoadByte(DisOpcode uint32) {
 //
 // 100xxx | rs   | rt   | <--immediate16bit--> | load rt,[rs+imm]
 // lw  rt,imm(rs)    rt=[imm+rs]  ;word
-func (cpu *CPU) DisOpLoadWord(DisOpcode uint32) {
-	imm16 := SignExtendedWord(GetValue(DisOpcode, 0, 16))
-	rt := int(GetValue(DisOpcode, 16, 5))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpLoadWord(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,%08x(r%d)", "lw", rt, imm16, rs)
 }
@@ -351,10 +359,10 @@ func (cpu *CPU) DisOpLoadWord(DisOpcode uint32) {
 //
 // 100xxx | rs   | rt   | <--immediate16bit--> | load rt,[rs+imm]
 // lbu rt,imm(rs)    rt=[imm+rs]  ;byte zero-extended
-func (cpu *CPU) DisOpLoadByteU(DisOpcode uint32) {
-	imm16 := SignExtendedWord(GetValue(DisOpcode, 0, 16))
-	rt := int(GetValue(DisOpcode, 16, 5))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpLoadByteU(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,%08x(r%d)", "lbu", rt, imm16, rs)
 }
@@ -365,10 +373,10 @@ func (cpu *CPU) DisOpLoadByteU(DisOpcode uint32) {
 //
 // 101xxx | rs   | rt   | <--immediate16bit--> | store rt,[rs+imm]
 // sb  rt,imm(rs)    [imm+rs]=(rt AND FFh)   ;store 8bit
-func (cpu *CPU) DisOpStoreByte(DisOpcode uint32) {
-	imm16 := SignExtendedWord(GetValue(DisOpcode, 0, 16))
-	rt := int(GetValue(DisOpcode, 16, 5))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpStoreByte(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,%08x(r%d)", "sb", rt, imm16, rs)
 }
@@ -379,10 +387,10 @@ func (cpu *CPU) DisOpStoreByte(DisOpcode uint32) {
 //
 // 101xxx | rs   | rt   | <--immediate16bit--> | store rt,[rs+imm]
 // sh  rt,imm(rs)    [imm+rs]=(rt AND FFFFh) ;store 16bit
-func (cpu *CPU) DisOpStoreHWord(DisOpcode uint32) {
-	imm16 := SignExtendedWord(GetValue(DisOpcode, 0, 16))
-	rt := int(GetValue(DisOpcode, 16, 5))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpStoreHWord(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,%08x(r%d)", "sh", rt, imm16, rs)
 }
@@ -393,16 +401,16 @@ func (cpu *CPU) DisOpStoreHWord(DisOpcode uint32) {
 //
 // 101xxx | rs   | rt   | <--immediate16bit--> | store rt,[rs+imm]
 // sw  rt,imm(rs)    [imm+rs]=rt             ;store 32bit
-func (cpu *CPU) DisOpStoreWord(DisOpcode uint32) {
-	imm16 := SignExtendedWord(GetValue(DisOpcode, 0, 16))
-	rt := int(GetValue(DisOpcode, 16, 5))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpStoreWord(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,%08x(r%d)", "sw", rt, imm16, rs)
 }
 
 /*
-Secondary DisOpcodes are implemented here
+Secondary opcodes are implemented here
 */
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -411,10 +419,10 @@ Secondary DisOpcodes are implemented here
 //
 // 000000 | N/A  | rt   | rd   | imm5 | 0000xx | shift-imm
 // sll  rd,rt,imm         rd = rt SHL (00h..1Fh)
-func (cpu *CPU) DisOpSLL(DisOpcode uint32) {
-	imm5 := GetValue(DisOpcode, 6, 5)
-	rd := int(GetValue(DisOpcode, 11, 5))
-	rt := int(GetValue(DisOpcode, 16, 5))
+func (cpu *CPU) DisOpSLL(opcode uint32) {
+	imm5 := GetValue(opcode, 6, 5)
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
 
 	fmt.Printf("%-7s r%d,r%d,%08x", "sll", rd, rt, imm5)
 }
@@ -425,10 +433,10 @@ func (cpu *CPU) DisOpSLL(DisOpcode uint32) {
 //
 // 000000 | N/A  | rt   | rd   | imm5 | 0000xx | shift-imm
 // srl  rd,rt,imm         rd = rt SHR (00h..1Fh)
-func (cpu *CPU) DisOpSRL(DisOpcode uint32) {
-	imm5 := GetValue(DisOpcode, 6, 5)
-	rd := int(GetValue(DisOpcode, 11, 5))
-	rt := int(GetValue(DisOpcode, 16, 5))
+func (cpu *CPU) DisOpSRL(opcode uint32) {
+	imm5 := GetValue(opcode, 6, 5)
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
 
 	fmt.Printf("%-7s r%d,r%d,%08x", "srl", rd, rt, imm5)
 }
@@ -439,10 +447,10 @@ func (cpu *CPU) DisOpSRL(DisOpcode uint32) {
 //
 // 000000 | N/A  | rt   | rd   | imm5 | 0000xx | shift-imm
 // sra  rd,rt,imm         rd = rt SAR (00h..1Fh)
-func (cpu *CPU) DisOpSRA(DisOpcode uint32) {
-	imm5 := GetValue(DisOpcode, 6, 5)
-	rd := int(GetValue(DisOpcode, 11, 5))
-	rt := int(GetValue(DisOpcode, 16, 5))
+func (cpu *CPU) DisOpSRA(opcode uint32) {
+	imm5 := GetValue(opcode, 6, 5)
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
 
 	fmt.Printf("%-7s r%d,r%d,%08x", "sra", rd, rt, imm5)
 }
@@ -453,8 +461,8 @@ func (cpu *CPU) DisOpSRA(DisOpcode uint32) {
 //
 // 000000 | rs   | N/A  | N/A  | N/A  | 001000 | jr
 // jr     rs          pc=rs
-func (cpu *CPU) DisOpJR(DisOpcode uint32) {
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpJR(opcode uint32) {
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d", "jr", rs)
 }
@@ -465,9 +473,9 @@ func (cpu *CPU) DisOpJR(DisOpcode uint32) {
 //
 // 000000 | rs   | N/A  | rd   | N/A  | 001001 | jalr
 // jalr (rd,)rs(,rd)  pc=rs, rd=$+8
-func (cpu *CPU) DisOpJALR(DisOpcode uint32) {
-	rd := int(GetValue(DisOpcode, 11, 5))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpJALR(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,r%d", "jalr", rd, rs)
 }
@@ -476,10 +484,22 @@ func (cpu *CPU) DisOpJALR(DisOpcode uint32) {
 //
 //	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
 //
+// 000000 | <-----comment20bit------> | 00110x | sys/brk
+// syscall  imm20        generates a system call exception
+func (cpu *CPU) DisOpSYS(opcode uint32) {
+	comment := GetValue(opcode, 6, 20)
+
+	fmt.Printf("%-7s %x", "syscall", comment)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
 // 000000 | N/A  | N/A  | rd   | N/A  | 0100x0 | mfhi/mflo
 // mfhi   rd              rd=hi  ;move from hi
-func (cpu *CPU) DisOpMFHI(DisOpcode uint32) {
-	rd := int(GetValue(DisOpcode, 11, 5))
+func (cpu *CPU) DisOpMFHI(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
 
 	fmt.Printf("%-7s r%d", "mfhi", rd)
 }
@@ -488,12 +508,36 @@ func (cpu *CPU) DisOpMFHI(DisOpcode uint32) {
 //
 //	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
 //
+// 000000 | rs   | N/A  | N/A  | N/A  | 0100x1 | mthi/mtlo
+// mthi   rs              hi=rs  ;move to hi
+func (cpu *CPU) DisOpMTHI(opcode uint32) {
+	rs := int(GetValue(opcode, 21, 5))
+
+	fmt.Printf("%-7s r%d", "mthi", rs)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
 // 000000 | N/A  | N/A  | rd   | N/A  | 0100x0 | mfhi/mflo
 // mflo   rd              rd=lo  ;move from lo
-func (cpu *CPU) DisOpMFLO(DisOpcode uint32) {
-	rd := int(GetValue(DisOpcode, 11, 5))
+func (cpu *CPU) DisOpMFLO(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
 
 	fmt.Printf("%-7s r%d", "mflo", rd)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | rs   | N/A  | N/A  | N/A  | 0100x1 | mthi/mtlo
+// mtlo   rs              lo=rs  ;move to lo
+func (cpu *CPU) DisOpMTLO(opcode uint32) {
+	rs := int(GetValue(opcode, 21, 5))
+
+	fmt.Printf("%-7s r%d", "mtlo", rs)
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -503,9 +547,9 @@ func (cpu *CPU) DisOpMFLO(DisOpcode uint32) {
 // 000000 | rs   | rt   | N/A  | N/A  | 0110xx | mul/div
 // div    rs,rt           lo = rs/rt, hi=rs mod rt (signed)
 // TODO timing
-func (cpu *CPU) DisOpDIV(DisOpcode uint32) {
-	rt := int(GetValue(DisOpcode, 16, 5))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpDIV(opcode uint32) {
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,r%d", "div", rs, rt)
 }
@@ -517,9 +561,9 @@ func (cpu *CPU) DisOpDIV(DisOpcode uint32) {
 // 000000 | rs   | rt   | N/A  | N/A  | 0110xx | mul/div
 // divu   rs,rt           lo = rs/rt, hi=rs mod rt (unsigned)
 // TODO timing
-func (cpu *CPU) DisOpDIVU(DisOpcode uint32) {
-	rt := int(GetValue(DisOpcode, 16, 5))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpDIVU(opcode uint32) {
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,r%d", "divu", rs, rt)
 }
@@ -530,10 +574,10 @@ func (cpu *CPU) DisOpDIVU(DisOpcode uint32) {
 //
 // 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
 // add   rd,rs,rt         rd=rs+rt (with overflow trap)
-func (cpu *CPU) DisOpADD(DisOpcode uint32) {
-	rd := int(GetValue(DisOpcode, 11, 5))
-	rt := int(GetValue(DisOpcode, 16, 5))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpADD(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,r%d,r%d", "add", rd, rs, rt)
 }
@@ -544,10 +588,10 @@ func (cpu *CPU) DisOpADD(DisOpcode uint32) {
 //
 // 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
 // addu  rd,rs,rt         rd=rs+rt
-func (cpu *CPU) DisOpADDU(DisOpcode uint32) {
-	rd := int(GetValue(DisOpcode, 11, 5))
-	rt := int(GetValue(DisOpcode, 16, 5))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpADDU(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,r%d,r%d", "addu", rd, rs, rt)
 }
@@ -558,10 +602,10 @@ func (cpu *CPU) DisOpADDU(DisOpcode uint32) {
 //
 // 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
 // subu  rd,rs,rt         rd=rs-rt
-func (cpu *CPU) DisOpSUBU(DisOpcode uint32) {
-	rd := int(GetValue(DisOpcode, 11, 5))
-	rt := int(GetValue(DisOpcode, 16, 5))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpSUBU(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,r%d,r%d", "subu", rd, rs, rt)
 }
@@ -572,10 +616,10 @@ func (cpu *CPU) DisOpSUBU(DisOpcode uint32) {
 //
 // 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
 // and  rd,rs,rt         rd = rs AND rt
-func (cpu *CPU) DisOpAND(DisOpcode uint32) {
-	rd := int(GetValue(DisOpcode, 11, 5))
-	rt := int(GetValue(DisOpcode, 16, 5))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpAND(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,r%d,r%d", "and", rd, rs, rt)
 }
@@ -586,10 +630,10 @@ func (cpu *CPU) DisOpAND(DisOpcode uint32) {
 //
 // 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
 // or   rd,rs,rt         rd = rs OR  rt
-func (cpu *CPU) DisOpOR(DisOpcode uint32) {
-	rd := int(GetValue(DisOpcode, 11, 5))
-	rt := int(GetValue(DisOpcode, 16, 5))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpOR(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,r%d,r%d", "or", rd, rs, rt)
 }
@@ -600,10 +644,10 @@ func (cpu *CPU) DisOpOR(DisOpcode uint32) {
 //
 // 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
 // setlt slt   rd,rs,rt  if rs<rt then rd=1 else rd=0 (signed)
-func (cpu *CPU) DisOpSLT(DisOpcode uint32) {
-	rd := int(GetValue(DisOpcode, 11, 5))
-	rt := int(GetValue(DisOpcode, 16, 5))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpSLT(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,r%d,r%d", "slt", rd, rs, rt)
 }
@@ -614,16 +658,16 @@ func (cpu *CPU) DisOpSLT(DisOpcode uint32) {
 //
 // 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
 // setb  sltu  rd,rs,rt  if rs<rt then rd=1 else rd=0 (unsigned)
-func (cpu *CPU) DisOpSLTU(DisOpcode uint32) {
-	rd := int(GetValue(DisOpcode, 11, 5))
-	rt := int(GetValue(DisOpcode, 16, 5))
-	rs := int(GetValue(DisOpcode, 21, 5))
+func (cpu *CPU) DisOpSLTU(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,r%d,r%d", "sltu", rd, rs, rt)
 }
 
 /*
-CDisOp0 DisOpcodes are implemented here
+CDisOp0 opcodes are implemented here
 */
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -632,9 +676,9 @@ CDisOp0 DisOpcodes are implemented here
 //
 // 0100nn |0|0000| rt   | rd   | N/A  | 000000 | MFCn rt,rd_dat  ;rt = dat
 // mfc# rt,rd       ;rt = cDisOp#datRd ;data regs
-func (cpu *CPU) DisOpMFC0(DisOpcode uint32) {
-	rd := GetValue(DisOpcode, 11, 5)
-	rt := int(GetValue(DisOpcode, 16, 5))
+func (cpu *CPU) DisOpMFC0(opcode uint32) {
+	rd := GetValue(opcode, 11, 5)
+	rt := int(GetValue(opcode, 16, 5))
 
 	fmt.Printf("%-7s r%d,r%d", "mfc0", rt, rd)
 }
@@ -645,9 +689,23 @@ func (cpu *CPU) DisOpMFC0(DisOpcode uint32) {
 //
 // 0100nn |0|0100| rt   | rd   | N/A  | 000000 | MTCn rt,rd_dat  ;dat = rt
 // mtc# rt,rd       ;cDisOp#datRd = rt ;data regs
-func (cpu *CPU) DisOpMTC0(DisOpcode uint32) {
-	rd := GetValue(DisOpcode, 11, 5)
-	rt := int(GetValue(DisOpcode, 16, 5))
+func (cpu *CPU) DisOpMTC0(opcode uint32) {
+	rd := GetValue(opcode, 11, 5)
+	rt := int(GetValue(opcode, 16, 5))
 
 	fmt.Printf("%-7s r%d,r%d", "mtc0", rt, rd)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 010000 |1|0000| N/A  | N/A  | N/A  | 010000 | COP0 10h  ;=RFE
+// rfe
+func (cpu *CPU) DisOpRFE(opcode uint32) {
+	if GetValue(opcode, 0, 6) != 0b010000 {
+		panic(fmt.Sprintf("[CPU::OpRFE] Unknown opcode: %x", opcode))
+	}
+
+	fmt.Printf("rfe")
 }

@@ -68,6 +68,7 @@ func (cpu *CPU) OpJump(opcode uint32) {
 	imm26 := GetValue(opcode, 0, 26)
 
 	cpu.next_pc = (cpu.pc & 0xf0000000) | (imm26 << 2)
+	cpu.isBranch = true
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -164,7 +165,7 @@ func (cpu *CPU) OpADDI(opcode uint32) {
 	b := int32(cpu.reg(rs))
 
 	if a > 0 && b > math.MaxInt32-a {
-		panic("[CPU::OpADDI] Signed integer overflow!!!")
+		cpu.enterException(EXC_OVERFLOW)
 	}
 
 	val := uint32(a + b)
@@ -309,9 +310,14 @@ func (cpu *CPU) OpLoadWord(opcode uint32) {
 	rs := int(GetValue(opcode, 21, 5))
 
 	addr := cpu.reg(rs) + imm16
-	val := cpu.Core.Bus.Read32(addr)
 
-	cpu.loadDelayInit(rt, val)
+	// addresses must be 32 bit aligned
+	if addr%4 != 0 {
+		cpu.enterException(EXC_ADDR_ERROR_LOAD)
+	} else {
+		val := cpu.Core.Bus.Read32(addr)
+		cpu.loadDelayInit(rt, val)
+	}
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -374,8 +380,14 @@ func (cpu *CPU) OpStoreHWord(opcode uint32) {
 	rs := int(GetValue(opcode, 21, 5))
 
 	addr := cpu.reg(rs) + imm16
-	val := uint16(cpu.reg(rt))
-	cpu.Core.Bus.Write16(addr, val)
+
+	// addresses must be 16 bit aligned
+	if addr%2 != 0 {
+		cpu.enterException(EXC_ADDR_ERROR_STORE)
+	} else {
+		val := uint16(cpu.reg(rt))
+		cpu.Core.Bus.Write16(addr, val)
+	}
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -395,8 +407,14 @@ func (cpu *CPU) OpStoreWord(opcode uint32) {
 	rs := int(GetValue(opcode, 21, 5))
 
 	addr := cpu.reg(rs) + imm16
-	val := cpu.reg(rt)
-	cpu.Core.Bus.Write32(addr, val)
+
+	// addresses must be 32 bit aligned
+	if addr%4 != 0 {
+		cpu.enterException(EXC_ADDR_ERROR_STORE)
+	} else {
+		val := cpu.reg(rt)
+		cpu.Core.Bus.Write32(addr, val)
+	}
 }
 
 /*
@@ -458,6 +476,7 @@ func (cpu *CPU) OpJR(opcode uint32) {
 	rs := int(GetValue(opcode, 21, 5))
 
 	cpu.next_pc = cpu.reg(rs)
+	cpu.isBranch = true
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -472,6 +491,19 @@ func (cpu *CPU) OpJALR(opcode uint32) {
 
 	cpu.modifyReg(rd, cpu.next_pc) // store the return address in rd
 	cpu.next_pc = cpu.reg(rs)
+	cpu.isBranch = true
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | <-----comment20bit------> | 00110x | sys/brk
+// syscall  imm20        generates a system call exception
+func (cpu *CPU) OpSYS(opcode uint32) {
+	// comment := GetValue(opcode, 6, 20)
+
+	cpu.enterException(EXC_SYSCALL)
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -490,12 +522,36 @@ func (cpu *CPU) OpMFHI(opcode uint32) {
 //
 //	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
 //
+// 000000 | rs   | N/A  | N/A  | N/A  | 0100x1 | mthi/mtlo
+// mthi   rs              hi=rs  ;move to hi
+func (cpu *CPU) OpMTHI(opcode uint32) {
+	rs := int(GetValue(opcode, 21, 5))
+
+	cpu.hi = cpu.reg(rs)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
 // 000000 | N/A  | N/A  | rd   | N/A  | 0100x0 | mfhi/mflo
 // mflo   rd              rd=lo  ;move from lo
 func (cpu *CPU) OpMFLO(opcode uint32) {
 	rd := int(GetValue(opcode, 11, 5))
 
 	cpu.modifyReg(rd, cpu.lo)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | rs   | N/A  | N/A  | N/A  | 0100x1 | mthi/mtlo
+// mtlo   rs              lo=rs  ;move to lo
+func (cpu *CPU) OpMTLO(opcode uint32) {
+	rs := int(GetValue(opcode, 21, 5))
+
+	cpu.lo = cpu.reg(rs)
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -567,7 +623,7 @@ func (cpu *CPU) OpADD(opcode uint32) {
 	b := int32(cpu.reg(rt))
 
 	if a > 0 && b > math.MaxInt32-a {
-		panic("[CPU::OpADD] Signed integer overflow!!!")
+		cpu.enterException(EXC_OVERFLOW)
 	}
 
 	val := uint32(a + b)
@@ -691,7 +747,9 @@ func (cpu *CPU) OpMFC0(opcode uint32) {
 	case 12:
 		val = cpu.sr
 	case 13:
-		panic("[CPU::OpMFC0] The cause register is not implemented yet!")
+		val = cpu.cause
+	case 14:
+		val = cpu.epc
 	default:
 		panic(fmt.Sprintf("[CPU::OpMFC0] Unsupported COP0 register: %x", rd))
 	}
@@ -718,10 +776,27 @@ func (cpu *CPU) OpMTC0(opcode uint32) {
 	case 12:
 		cpu.sr = val
 	case 13:
-		if val != 0 {
-			panic("[CPU::OpMTC0] The cause register is not implemented yet!")
-		}
+		cpu.cause = val
+	case 14:
+		cpu.epc = val
 	default:
 		panic(fmt.Sprintf("[CPU::OpMTC0] Unsupported COP0 register: %x", rd))
 	}
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 010000 |1|0000| N/A  | N/A  | N/A  | 010000 | COP0 10h  ;=RFE
+// rfe
+func (cpu *CPU) OpRFE(opcode uint32) {
+	if GetValue(opcode, 0, 6) != 0b010000 {
+		panic(fmt.Sprintf("[CPU::OpRFE] Unknown opcode: %x", opcode))
+	}
+
+	var mask uint32 = 0b111111
+	mode := cpu.sr & mask
+	cpu.sr &= ^mask
+	cpu.sr |= mode >> 2
 }

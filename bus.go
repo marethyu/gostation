@@ -78,6 +78,7 @@ type Bus struct {
 	Bios           Access
 	MemoryControl1 *MemoryControl1
 	SPU            Access
+	Timer          Access /* TODO */
 	Expansion1     Access
 	Expansion2     Access /* TODO implement debug uart */
 }
@@ -94,6 +95,7 @@ func NewBus(core *GoStationCore, pathToBios string) *Bus {
 		NewMemory(bios, 0x1fc00000, 1024*512),
 		NewMemoryControl1(),
 		NewMemory(make([]uint8, 640), 0x1f801c00, 640),
+		NewMemory(make([]uint8, 3*16), 0x1f801100, 3*16),
 		NewMemory(make([]uint8, 1024*512), 0x1f000000, 1024*512),
 		NewMemory(make([]uint8, 128), 0x1f802000, 128),
 	}
@@ -140,6 +142,10 @@ func (bus *Bus) Read16(address uint32) uint16 {
 		return bus.SPU.Read16(address)
 	}
 
+	if bus.Timer.Contains(address) {
+		return bus.Timer.Read16(address)
+	}
+
 	if bus.Expansion1.Contains(address) {
 		return bus.Expansion1.Read16(address)
 	}
@@ -166,12 +172,20 @@ func (bus *Bus) Read32(address uint32) uint32 {
 		return bus.SPU.Read32(address)
 	}
 
+	if bus.Timer.Contains(address) {
+		return bus.Timer.Read32(address)
+	}
+
 	if bus.Expansion1.Contains(address) {
 		return bus.Expansion1.Read32(address)
 	}
 
 	if bus.Expansion2.Contains(address) {
 		return bus.Expansion2.Read32(address)
+	}
+
+	if bus.Core.Interrupts.Contains(address) {
+		return bus.Core.Interrupts.Read32(address)
 	}
 
 	panic(fmt.Sprintf("[Bus::Read32] Invalid address: %x", address))
@@ -220,6 +234,11 @@ func (bus *Bus) Write16(address uint32, data uint16) {
 		return
 	}
 
+	if bus.Timer.Contains(address) {
+		bus.Timer.Write16(address, data)
+		return
+	}
+
 	if bus.Expansion1.Contains(address) {
 		bus.Expansion1.Write16(address, data)
 		return
@@ -248,6 +267,11 @@ func (bus *Bus) Write32(address uint32, data uint32) {
 
 	if bus.SPU.Contains(address) {
 		bus.SPU.Write32(address, data)
+		return
+	}
+
+	if bus.Timer.Contains(address) {
+		bus.Timer.Write32(address, data)
 		return
 	}
 

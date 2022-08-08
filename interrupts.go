@@ -24,6 +24,17 @@ func (ic *Interrupts) Contains(address uint32) bool {
 	return address >= IC_OFFSET && address < (IC_OFFSET+IC_SIZE)
 }
 
+func (ic *Interrupts) Read32(address uint32) uint32 {
+	switch address {
+	case 0x1f801070:
+		return ic.Status
+	case 0x1f801074:
+		return ic.Mask
+	default:
+		return 0 // never reached
+	}
+}
+
 func (ic *Interrupts) Write32(address uint32, data uint32) {
 	switch address {
 	case 0x1f801070:
