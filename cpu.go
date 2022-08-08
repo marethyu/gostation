@@ -62,12 +62,11 @@ func (cpu *CPU) Step() {
 func (cpu *CPU) Log() {
 	for i := 0; i < 8; i++ {
 		r := i * 4
-		fmt.Printf("r%02d=%08x r%02d=%08x r%02d=%08x r%02d=%08x\n", r, cpu.r[r], r+1, cpu.r[r+1], r+2, cpu.r[r+2], r+3, cpu.r[r+3])
+		fmt.Printf("r%d=%08x r%d=%08x r%d=%08x r%d=%08x\n", r, cpu.r[r], r+1, cpu.r[r+1], r+2, cpu.r[r+2], r+3, cpu.r[r+3])
 	}
 
 	fmt.Printf("hi=%08x lo=%08x\n", cpu.hi, cpu.lo)
-	fmt.Printf("pc=%08x\n", cpu.pc)
-	fmt.Printf("[pc]=%08x\n\n", cpu.Core.Bus.Read32(cpu.pc))
+	fmt.Printf("[pc=%08x]=%08x\n\n", cpu.pc, cpu.Core.Bus.Read32(cpu.pc))
 }
 
 /* Refer to this page https://psx-spx.consoledev.net/cpuspecifications/#cpu-opcode-encoding for all opcodes and its encodings */
