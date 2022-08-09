@@ -80,6 +80,7 @@ type Bus struct {
 	SPU            Access
 	Timer          Access /* TODO */
 	DMA            Access /* TODO */
+	GPU            Access /* TODO */
 	Expansion1     Access
 	Expansion2     Access /* TODO implement debug uart */
 }
@@ -98,6 +99,7 @@ func NewBus(core *GoStationCore, pathToBios string) *Bus {
 		NewMemory(make([]uint8, 640), 0x1f801c00, 640),
 		NewMemory(make([]uint8, 3*16), 0x1f801100, 3*16),
 		NewMemory(make([]uint8, 8*16), 0x1f801080, 8*16),
+		NewMemory(make([]uint8, 8), 0x1f801810, 8),
 		NewMemory(make([]uint8, 1024*512), 0x1f000000, 1024*512),
 		NewMemory(make([]uint8, 128), 0x1f802000, 128),
 	}
@@ -156,6 +158,10 @@ func (bus *Bus) Read16(address uint32) uint16 {
 		return bus.Expansion2.Read16(address)
 	}
 
+	if bus.Core.Interrupts.Contains(address) {
+		return bus.Core.Interrupts.Read16(address)
+	}
+
 	panic(fmt.Sprintf("[Bus::Read16] Invalid address: %x", address))
 }
 
@@ -180,6 +186,13 @@ func (bus *Bus) Read32(address uint32) uint32 {
 
 	if bus.DMA.Contains(address) {
 		return bus.DMA.Read32(address)
+	}
+
+	if bus.GPU.Contains(address) {
+		if address == 0x1f801814 {
+			return 0x10000000 // TODO
+		}
+		return bus.GPU.Read32(address)
 	}
 
 	if bus.Expansion1.Contains(address) {
@@ -255,6 +268,11 @@ func (bus *Bus) Write16(address uint32, data uint16) {
 		return
 	}
 
+	if bus.Core.Interrupts.Contains(address) {
+		bus.Core.Interrupts.Write16(address, data)
+		return
+	}
+
 	panic(fmt.Sprintf("[Bus::Write16] Can't write data %x into this address: %x", data, address))
 }
 
@@ -282,7 +300,13 @@ func (bus *Bus) Write32(address uint32, data uint32) {
 	}
 
 	if bus.DMA.Contains(address) {
-		bus.DMA.Write32(address, data)
+		// Ignore writes to DMA for now cuz it will cause infinite loop
+		// bus.DMA.Write32(address, data)
+		return
+	}
+
+	if bus.GPU.Contains(address) {
+		bus.GPU.Write32(address, data)
 		return
 	}
 
