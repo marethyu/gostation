@@ -174,6 +174,8 @@ func (cpu *CPU) ExecuteSecondaryOpcode(opcode uint32) {
 		cpu.OpJALR(opcode)
 	case 0x0c:
 		cpu.OpSYS(opcode)
+	case 0x0d:
+		cpu.OpBRK(opcode)
 	case 0x10:
 		cpu.OpMFHI(opcode)
 	case 0x11:

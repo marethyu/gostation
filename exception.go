@@ -30,6 +30,7 @@ const (
 	EXC_ADDR_ERROR_LOAD  = 0x4
 	EXC_ADDR_ERROR_STORE = 0x5
 	EXC_SYSCALL          = 0x8
+	EXC_BREAK            = 0x9
 	EXC_OVERFLOW         = 0xc
 )
 
@@ -41,7 +42,9 @@ func (cpu *CPU) enterException(cause uint32) {
 	case EXC_ADDR_ERROR_STORE:
 		fmt.Fprintln(os.Stderr, "[CPU::enterException] Misaligned address while storing")
 	case EXC_SYSCALL:
-		fmt.Fprintln(os.Stderr, "[CPU::enterException] Syscall")
+		fmt.Fprintln(os.Stderr, "[CPU::enterException] System call")
+	case EXC_BREAK:
+		fmt.Fprintln(os.Stderr, "[CPU::enterException] Breakpoint")
 	case EXC_OVERFLOW:
 		fmt.Fprintln(os.Stderr, "[CPU::enterException] Overflow during addition")
 	}

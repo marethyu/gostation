@@ -83,6 +83,8 @@ func (cpu *CPU) DisassembleSecondaryOpcode(opcode uint32) {
 		cpu.DisOpJALR(opcode)
 	case 0x0c:
 		cpu.DisOpSYS(opcode)
+	case 0x0d:
+		cpu.DisOpBRK(opcode)
 	case 0x10:
 		cpu.DisOpMFHI(opcode)
 	case 0x11:
@@ -576,6 +578,18 @@ func (cpu *CPU) DisOpSYS(opcode uint32) {
 	comment := GetValue(opcode, 6, 20)
 
 	fmt.Printf("%-7s %x", "syscall", comment)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | <-----comment20bit------> | 00110x | sys/brk
+// break    imm20        generates a breakpoint exception
+func (cpu *CPU) DisOpBRK(opcode uint32) {
+	comment := GetValue(opcode, 6, 20)
+
+	fmt.Printf("%-7s %x", "break", comment)
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |

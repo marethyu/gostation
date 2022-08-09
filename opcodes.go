@@ -584,6 +584,18 @@ func (cpu *CPU) OpSYS(opcode uint32) {
 //
 //	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
 //
+// 000000 | <-----comment20bit------> | 00110x | sys/brk
+// break    imm20        generates a breakpoint exception
+func (cpu *CPU) OpBRK(opcode uint32) {
+	// comment := GetValue(opcode, 6, 20)
+
+	cpu.enterException(EXC_BREAK)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
 // 000000 | N/A  | N/A  | rd   | N/A  | 0100x0 | mfhi/mflo
 // mfhi   rd              rd=hi  ;move from hi
 func (cpu *CPU) OpMFHI(opcode uint32) {
