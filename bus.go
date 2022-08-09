@@ -79,6 +79,7 @@ type Bus struct {
 	MemoryControl1 *MemoryControl1
 	SPU            Access
 	Timer          Access /* TODO */
+	DMA            Access /* TODO */
 	Expansion1     Access
 	Expansion2     Access /* TODO implement debug uart */
 }
@@ -96,6 +97,7 @@ func NewBus(core *GoStationCore, pathToBios string) *Bus {
 		NewMemoryControl1(),
 		NewMemory(make([]uint8, 640), 0x1f801c00, 640),
 		NewMemory(make([]uint8, 3*16), 0x1f801100, 3*16),
+		NewMemory(make([]uint8, 8*16), 0x1f801080, 8*16),
 		NewMemory(make([]uint8, 1024*512), 0x1f000000, 1024*512),
 		NewMemory(make([]uint8, 128), 0x1f802000, 128),
 	}
@@ -174,6 +176,10 @@ func (bus *Bus) Read32(address uint32) uint32 {
 
 	if bus.Timer.Contains(address) {
 		return bus.Timer.Read32(address)
+	}
+
+	if bus.DMA.Contains(address) {
+		return bus.DMA.Read32(address)
 	}
 
 	if bus.Expansion1.Contains(address) {
@@ -272,6 +278,11 @@ func (bus *Bus) Write32(address uint32, data uint32) {
 
 	if bus.Timer.Contains(address) {
 		bus.Timer.Write32(address, data)
+		return
+	}
+
+	if bus.DMA.Contains(address) {
+		bus.DMA.Write32(address, data)
 		return
 	}
 

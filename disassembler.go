@@ -40,10 +40,14 @@ func (cpu *CPU) DisassemblePrimaryOpcode(opcode uint32) {
 		cpu.DisOpLUI(opcode)
 	case 0x20:
 		cpu.DisOpLoadByte(opcode)
+	case 0x21:
+		cpu.DisOpLoadHWord(opcode)
 	case 0x23:
 		cpu.DisOpLoadWord(opcode)
 	case 0x24:
 		cpu.DisOpLoadByteU(opcode)
+	case 0x25:
+		cpu.DisOpLoadHWordU(opcode)
 	case 0x28:
 		cpu.DisOpStoreByte(opcode)
 	case 0x29:
@@ -67,6 +71,8 @@ func (cpu *CPU) DisassembleSecondaryOpcode(opcode uint32) {
 		cpu.DisOpSRL(opcode)
 	case 0x03:
 		cpu.DisOpSRA(opcode)
+	case 0x04:
+		cpu.DisOpSLLV(opcode)
 	case 0x08:
 		cpu.DisOpJR(opcode)
 	case 0x09:
@@ -344,6 +350,20 @@ func (cpu *CPU) DisOpLoadByte(opcode uint32) {
 //	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
 //
 // 100xxx | rs   | rt   | <--immediate16bit--> | load rt,[rs+imm]
+// lh  rt,imm(rs)    rt=[imm+rs]  ;halfword sign-extended
+func (cpu *CPU) DisOpLoadHWord(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	fmt.Printf("%-7s r%d,%08x(r%d)", "lh", rt, imm16, rs)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 100xxx | rs   | rt   | <--immediate16bit--> | load rt,[rs+imm]
 // lw  rt,imm(rs)    rt=[imm+rs]  ;word
 func (cpu *CPU) DisOpLoadWord(opcode uint32) {
 	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
@@ -365,6 +385,20 @@ func (cpu *CPU) DisOpLoadByteU(opcode uint32) {
 	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,%08x(r%d)", "lbu", rt, imm16, rs)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 100xxx | rs   | rt   | <--immediate16bit--> | load rt,[rs+imm]
+// lhu rt,imm(rs)    rt=[imm+rs]  ;halfword zero-extended
+func (cpu *CPU) DisOpLoadHWordU(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	fmt.Printf("%-7s r%d,%08x(r%d)", "lhu", rt, imm16, rs)
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -453,6 +487,20 @@ func (cpu *CPU) DisOpSRA(opcode uint32) {
 	rt := int(GetValue(opcode, 16, 5))
 
 	fmt.Printf("%-7s r%d,r%d,%08x", "sra", rd, rt, imm5)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | rs   | rt   | rd   | N/A  | 0001xx | shift-reg
+// sllv rd,rt,rs          rd = rt SHL (rs AND 1Fh)
+func (cpu *CPU) DisOpSLLV(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	fmt.Printf("%-7s r%d,r%d,r%d", "sllv", rd, rt, rs)
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |

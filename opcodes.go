@@ -278,11 +278,6 @@ func (cpu *CPU) OpLUI(opcode uint32) {
 // 100xxx | rs   | rt   | <--immediate16bit--> | load rt,[rs+imm]
 // lb  rt,imm(rs)    rt=[imm+rs]  ;byte sign-extended
 func (cpu *CPU) OpLoadByte(opcode uint32) {
-	if TestBit(cpu.sr, 16) {
-		// Ignore write when cache is isolated
-		return
-	}
-
 	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
 	rt := int(GetValue(opcode, 16, 5))
 	rs := int(GetValue(opcode, 21, 5))
@@ -290,7 +285,29 @@ func (cpu *CPU) OpLoadByte(opcode uint32) {
 	addr := cpu.reg(rs) + imm16
 	val := SignExtendedByte(cpu.Core.Bus.Read8(addr))
 
-	cpu.loadDelayInit(rt, val)
+	cpu.loadDelaySlotInit(rt, val)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 100xxx | rs   | rt   | <--immediate16bit--> | load rt,[rs+imm]
+// lh  rt,imm(rs)    rt=[imm+rs]  ;halfword sign-extended
+func (cpu *CPU) OpLoadHWord(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	addr := cpu.reg(rs) + imm16
+
+	// addresses must be 16 bit aligned
+	if addr%2 != 0 {
+		cpu.enterException(EXC_ADDR_ERROR_LOAD)
+	} else {
+		val := SignExtendedHWord(cpu.Core.Bus.Read16(addr))
+		cpu.loadDelaySlotInit(rt, val)
+	}
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -300,11 +317,6 @@ func (cpu *CPU) OpLoadByte(opcode uint32) {
 // 100xxx | rs   | rt   | <--immediate16bit--> | load rt,[rs+imm]
 // lw  rt,imm(rs)    rt=[imm+rs]  ;word
 func (cpu *CPU) OpLoadWord(opcode uint32) {
-	if TestBit(cpu.sr, 16) {
-		// Ignore write when cache is isolated
-		return
-	}
-
 	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
 	rt := int(GetValue(opcode, 16, 5))
 	rs := int(GetValue(opcode, 21, 5))
@@ -316,7 +328,7 @@ func (cpu *CPU) OpLoadWord(opcode uint32) {
 		cpu.enterException(EXC_ADDR_ERROR_LOAD)
 	} else {
 		val := cpu.Core.Bus.Read32(addr)
-		cpu.loadDelayInit(rt, val)
+		cpu.loadDelaySlotInit(rt, val)
 	}
 }
 
@@ -327,11 +339,6 @@ func (cpu *CPU) OpLoadWord(opcode uint32) {
 // 100xxx | rs   | rt   | <--immediate16bit--> | load rt,[rs+imm]
 // lbu rt,imm(rs)    rt=[imm+rs]  ;byte zero-extended
 func (cpu *CPU) OpLoadByteU(opcode uint32) {
-	if TestBit(cpu.sr, 16) {
-		// Ignore write when cache is isolated
-		return
-	}
-
 	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
 	rt := int(GetValue(opcode, 16, 5))
 	rs := int(GetValue(opcode, 21, 5))
@@ -339,7 +346,29 @@ func (cpu *CPU) OpLoadByteU(opcode uint32) {
 	addr := cpu.reg(rs) + imm16
 	val := uint32(cpu.Core.Bus.Read8(addr)) // zero extended
 
-	cpu.loadDelayInit(rt, val)
+	cpu.loadDelaySlotInit(rt, val)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 100xxx | rs   | rt   | <--immediate16bit--> | load rt,[rs+imm]
+// lhu rt,imm(rs)    rt=[imm+rs]  ;halfword zero-extended
+func (cpu *CPU) OpLoadHWordU(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	addr := cpu.reg(rs) + imm16
+
+	// addresses must be 16 bit aligned
+	if addr%2 != 0 {
+		cpu.enterException(EXC_ADDR_ERROR_LOAD)
+	} else {
+		val := cpu.Core.Bus.Read16(addr)
+		cpu.loadDelaySlotInit(rt, uint32(val))
+	}
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -464,6 +493,21 @@ func (cpu *CPU) OpSRA(opcode uint32) {
 
 	val := int32(cpu.reg(rt)) >> imm5
 	cpu.modifyReg(rd, uint32(val))
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | rs   | rt   | rd   | N/A  | 0001xx | shift-reg
+// sllv rd,rt,rs          rd = rt SHL (rs AND 1Fh)
+func (cpu *CPU) OpSLLV(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	val := cpu.reg(rt) << (cpu.reg(rs) & 0x1f)
+	cpu.modifyReg(rd, val)
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -754,7 +798,7 @@ func (cpu *CPU) OpMFC0(opcode uint32) {
 		panic(fmt.Sprintf("[CPU::OpMFC0] Unsupported COP0 register: %x", rd))
 	}
 
-	cpu.loadDelayInit(rt, val)
+	cpu.loadDelaySlotInit(rt, val)
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |

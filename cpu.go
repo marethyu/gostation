@@ -131,10 +131,14 @@ func (cpu *CPU) ExecutePrimaryOpcode(opcode uint32) {
 		cpu.OpLUI(opcode)
 	case 0x20:
 		cpu.OpLoadByte(opcode)
+	case 0x21:
+		cpu.OpLoadHWord(opcode)
 	case 0x23:
 		cpu.OpLoadWord(opcode)
 	case 0x24:
 		cpu.OpLoadByteU(opcode)
+	case 0x25:
+		cpu.OpLoadHWordU(opcode)
 	case 0x28:
 		cpu.OpStoreByte(opcode)
 	case 0x29:
@@ -158,6 +162,8 @@ func (cpu *CPU) ExecuteSecondaryOpcode(opcode uint32) {
 		cpu.OpSRL(opcode)
 	case 0x03:
 		cpu.OpSRA(opcode)
+	case 0x04:
+		cpu.OpSLLV(opcode)
 	case 0x08:
 		cpu.OpJR(opcode)
 	case 0x09:
@@ -224,7 +230,7 @@ func (cpu *CPU) reg(i int) uint32 {
 	return cpu.r[i]
 }
 
-func (cpu *CPU) loadDelayInit(i int, v uint32) {
+func (cpu *CPU) loadDelaySlotInit(i int, v uint32) {
 	if cpu.pending_load {
 		cpu.modifyReg(cpu.pending_r, cpu.pending_val)
 	}

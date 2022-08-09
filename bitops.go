@@ -25,6 +25,10 @@ func SignExtendedByte(n uint8) uint32 {
 	return uint32(int8(n))
 }
 
+func SignExtendedHWord(n uint16) uint32 {
+	return uint32(int16(n))
+}
+
 func SignExtendedWord(n uint32) uint32 {
 	return uint32(int16(n))
 }
