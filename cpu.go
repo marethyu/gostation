@@ -127,6 +127,8 @@ func (cpu *CPU) ExecutePrimaryOpcode(opcode uint32) {
 		cpu.OpANDI(opcode)
 	case 0x0d:
 		cpu.OpORI(opcode)
+	case 0x0e:
+		cpu.OpXORI(opcode)
 	case 0x0f:
 		cpu.OpLUI(opcode)
 	case 0x20:
@@ -146,7 +148,13 @@ func (cpu *CPU) ExecutePrimaryOpcode(opcode uint32) {
 	case 0x2b:
 		cpu.OpStoreWord(opcode)
 	case 0b010000:
-		cpu.ExecuteCop0Opcode(opcode)
+		cpu.ExecuteCOP0Opcode(opcode)
+	case 0b010001:
+		cpu.ExecuteCOP1Opcode(opcode)
+	case 0b010010:
+		cpu.ExecuteCOP2Opcode(opcode)
+	case 0b010011:
+		cpu.ExecuteCOP3Opcode(opcode)
 	default:
 		panic(fmt.Sprintf("[CPU::ExecutePrimaryOpcode] Unknown Opcode: %x", opcode))
 	}
@@ -184,6 +192,8 @@ func (cpu *CPU) ExecuteSecondaryOpcode(opcode uint32) {
 		cpu.OpMFLO(opcode)
 	case 0x13:
 		cpu.OpMTLO(opcode)
+	case 0x18:
+		cpu.OpMULT(opcode)
 	case 0x19:
 		cpu.OpMULTU(opcode)
 	case 0x1a:
@@ -194,6 +204,8 @@ func (cpu *CPU) ExecuteSecondaryOpcode(opcode uint32) {
 		cpu.OpADD(opcode)
 	case 0x21:
 		cpu.OpADDU(opcode)
+	case 0x22:
+		cpu.OpSUB(opcode)
 	case 0x23:
 		cpu.OpSUBU(opcode)
 	case 0x24:
@@ -213,7 +225,7 @@ func (cpu *CPU) ExecuteSecondaryOpcode(opcode uint32) {
 	}
 }
 
-func (cpu *CPU) ExecuteCop0Opcode(opcode uint32) {
+func (cpu *CPU) ExecuteCOP0Opcode(opcode uint32) {
 	op := GetValue(opcode, 21, 5)
 
 	switch op {
@@ -224,8 +236,20 @@ func (cpu *CPU) ExecuteCop0Opcode(opcode uint32) {
 	case 0b10000:
 		cpu.OpRFE(opcode)
 	default:
-		panic(fmt.Sprintf("[CPU::ExecuteCop0Opcode] Unknown Opcode: %x", opcode))
+		panic(fmt.Sprintf("[CPU::ExecuteCOP0Opcode] Unknown Opcode: %x", opcode))
 	}
+}
+
+func (cpu *CPU) ExecuteCOP1Opcode(opcode uint32) {
+	cpu.enterException(EXC_COP_UNUSABLE)
+}
+
+func (cpu *CPU) ExecuteCOP2Opcode(opcode uint32) {
+	panic("[CPU::ExecuteCOP2Opcode] GTE is not implemented yet!")
+}
+
+func (cpu *CPU) ExecuteCOP3Opcode(opcode uint32) {
+	cpu.enterException(EXC_COP_UNUSABLE)
 }
 
 func (cpu *CPU) modifyReg(i int, v uint32) {

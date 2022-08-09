@@ -31,6 +31,7 @@ const (
 	EXC_ADDR_ERROR_STORE = 0x5
 	EXC_SYSCALL          = 0x8
 	EXC_BREAK            = 0x9
+	EXC_COP_UNUSABLE     = 0xb
 	EXC_OVERFLOW         = 0xc
 )
 
@@ -45,6 +46,8 @@ func (cpu *CPU) enterException(cause uint32) {
 		fmt.Fprintln(os.Stderr, "[CPU::enterException] System call")
 	case EXC_BREAK:
 		fmt.Fprintln(os.Stderr, "[CPU::enterException] Breakpoint")
+	case EXC_COP_UNUSABLE:
+		fmt.Fprintln(os.Stderr, "[CPU::enterException] Unsupported coprocessor")
 	case EXC_OVERFLOW:
 		fmt.Fprintln(os.Stderr, "[CPU::enterException] Overflow during addition")
 	}

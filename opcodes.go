@@ -261,6 +261,21 @@ func (cpu *CPU) OpORI(opcode uint32) {
 //
 //	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
 //
+// 001xxx | rs   | rt   | <--immediate16bit--> | alu-imm
+// xori rt,rs,imm        rt = rs XOR (0000h..FFFFh)
+func (cpu *CPU) OpXORI(opcode uint32) {
+	imm16 := GetValue(opcode, 0, 16)
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	val := cpu.reg(rs) ^ imm16
+	cpu.modifyReg(rt, val)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
 // 001111 | N/A  | rt   | <--immediate16bit--> | lui-imm
 // lui  rt,imm            rt = (0000h..FFFFh) SHL 16
 func (cpu *CPU) OpLUI(opcode uint32) {
@@ -645,6 +660,24 @@ func (cpu *CPU) OpMTLO(opcode uint32) {
 //	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
 //
 // 000000 | rs   | rt   | N/A  | N/A  | 0110xx | mul/div
+// mult   rs,rt           hi:lo = rs*rt (signed)
+func (cpu *CPU) OpMULT(opcode uint32) {
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	a := int64(int32(cpu.reg(rs)))
+	b := int64(int32(cpu.reg(rt)))
+	val := uint64(a * b)
+
+	cpu.hi = uint32(val >> 32)
+	cpu.lo = uint32(val & 0xffffffff)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | rs   | rt   | N/A  | N/A  | 0110xx | mul/div
 // multu  rs,rt           hi:lo = rs*rt (unsigned)
 func (cpu *CPU) OpMULTU(opcode uint32) {
 	rt := int(GetValue(opcode, 16, 5))
@@ -746,6 +779,28 @@ func (cpu *CPU) OpADDU(opcode uint32) {
 	rs := int(GetValue(opcode, 21, 5))
 
 	val := cpu.reg(rs) + cpu.reg(rt)
+	cpu.modifyReg(rd, val)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
+// sub   rd,rs,rt         rd=rs-rt (with overflow trap)
+func (cpu *CPU) OpSUB(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	a := int32(cpu.reg(rs))
+	b := int32(cpu.reg(rt))
+
+	if b < 0 && a > math.MaxInt32+b {
+		cpu.enterException(EXC_OVERFLOW)
+	}
+
+	val := uint32(a - b)
 	cpu.modifyReg(rd, val)
 }
 

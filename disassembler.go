@@ -36,6 +36,8 @@ func (cpu *CPU) DisassemblePrimaryOpcode(opcode uint32) {
 		cpu.DisOpANDI(opcode)
 	case 0x0d:
 		cpu.DisOpORI(opcode)
+	case 0x0e:
+		cpu.DisOpXORI(opcode)
 	case 0x0f:
 		cpu.DisOpLUI(opcode)
 	case 0x20:
@@ -55,7 +57,13 @@ func (cpu *CPU) DisassemblePrimaryOpcode(opcode uint32) {
 	case 0x2b:
 		cpu.DisOpStoreWord(opcode)
 	case 0b010000:
-		cpu.DisassembleCop0Opcode(opcode)
+		cpu.DisassembleCOP0Opcode(opcode)
+	case 0b010001:
+		cpu.DisassembleCOP1Opcode(opcode)
+	case 0b010010:
+		cpu.DisassembleCOP2Opcode(opcode)
+	case 0b010011:
+		cpu.DisassembleCOP3Opcode(opcode)
 	default:
 		panic(fmt.Sprintf("[CPU::DisassemblePrimaryOpcode] Unknown Opcode: %x", opcode))
 	}
@@ -93,6 +101,8 @@ func (cpu *CPU) DisassembleSecondaryOpcode(opcode uint32) {
 		cpu.DisOpMFLO(opcode)
 	case 0x13:
 		cpu.DisOpMTLO(opcode)
+	case 0x18:
+		cpu.DisOpMULT(opcode)
 	case 0x19:
 		cpu.DisOpMULTU(opcode)
 	case 0x1a:
@@ -103,6 +113,8 @@ func (cpu *CPU) DisassembleSecondaryOpcode(opcode uint32) {
 		cpu.DisOpADD(opcode)
 	case 0x21:
 		cpu.DisOpADDU(opcode)
+	case 0x22:
+		cpu.DisOpSUB(opcode)
 	case 0x23:
 		cpu.DisOpSUBU(opcode)
 	case 0x24:
@@ -122,7 +134,7 @@ func (cpu *CPU) DisassembleSecondaryOpcode(opcode uint32) {
 	}
 }
 
-func (cpu *CPU) DisassembleCop0Opcode(opcode uint32) {
+func (cpu *CPU) DisassembleCOP0Opcode(opcode uint32) {
 	op := GetValue(opcode, 21, 5)
 
 	switch op {
@@ -133,8 +145,20 @@ func (cpu *CPU) DisassembleCop0Opcode(opcode uint32) {
 	case 0b10000:
 		cpu.DisOpRFE(opcode)
 	default:
-		panic(fmt.Sprintf("[CPU::DisassembleCop0Opcode] Unknown Opcode: %x", opcode))
+		panic(fmt.Sprintf("[CPU::DisassembleCOP0Opcode] Unknown Opcode: %x", opcode))
 	}
+}
+
+func (cpu *CPU) DisassembleCOP1Opcode(opcode uint32) {
+	fmt.Println("COP1 does not exist in Playstation!")
+}
+
+func (cpu *CPU) DisassembleCOP2Opcode(opcode uint32) {
+	fmt.Println("some COP2 opcode")
+}
+
+func (cpu *CPU) DisassembleCOP3Opcode(opcode uint32) {
+	fmt.Println("COP3 does not exist in Playstation!")
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -328,6 +352,20 @@ func (cpu *CPU) DisOpORI(opcode uint32) {
 	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,r%d,%08x", "ori", rt, rs, imm16)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 001xxx | rs   | rt   | <--immediate16bit--> | alu-imm
+// xori rt,rs,imm        rt = rs XOR (0000h..FFFFh)
+func (cpu *CPU) DisOpXORI(opcode uint32) {
+	imm16 := GetValue(opcode, 0, 16)
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	fmt.Printf("%-7s r%d,r%d,%08x", "xori", rt, rs, imm16)
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -645,6 +683,19 @@ func (cpu *CPU) DisOpMTLO(opcode uint32) {
 //	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
 //
 // 000000 | rs   | rt   | N/A  | N/A  | 0110xx | mul/div
+// mult   rs,rt           hi:lo = rs*rt (signed)
+func (cpu *CPU) DisOpMULT(opcode uint32) {
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	fmt.Printf("%-7s r%d,r%d", "mult", rs, rt)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | rs   | rt   | N/A  | N/A  | 0110xx | mul/div
 // multu  rs,rt           hi:lo = rs*rt (unsigned)
 func (cpu *CPU) DisOpMULTU(opcode uint32) {
 	rt := int(GetValue(opcode, 16, 5))
@@ -707,6 +758,20 @@ func (cpu *CPU) DisOpADDU(opcode uint32) {
 	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,r%d,r%d", "addu", rd, rs, rt)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
+// sub   rd,rs,rt         rd=rs-rt (with overflow trap)
+func (cpu *CPU) DisOpSUB(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	fmt.Printf("%-7s r%d,r%d,r%d", "sub", rd, rs, rt)
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
