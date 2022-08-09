@@ -49,7 +49,7 @@ func (cpu *CPU) enterException(cause uint32) {
 	case EXC_COP_UNUSABLE:
 		fmt.Fprintln(os.Stderr, "[CPU::enterException] Unsupported coprocessor")
 	case EXC_OVERFLOW:
-		fmt.Fprintln(os.Stderr, "[CPU::enterException] Overflow during addition")
+		fmt.Fprintln(os.Stderr, "[CPU::enterException] Overflow during addition/subtraction")
 	}
 
 	var vector uint32

@@ -164,7 +164,9 @@ func (cpu *CPU) OpADDI(opcode uint32) {
 	a := int32(imm16)
 	b := int32(cpu.reg(rs))
 
-	if a > 0 && b > math.MaxInt32-a {
+	// enter exception if a+b results in overflow or underflow
+	if (a > 0 && b > math.MaxInt32-a) ||
+		(a < 0 && b < math.MinInt32-a) {
 		cpu.enterException(EXC_OVERFLOW)
 	}
 
@@ -759,7 +761,9 @@ func (cpu *CPU) OpADD(opcode uint32) {
 	a := int32(cpu.reg(rs))
 	b := int32(cpu.reg(rt))
 
-	if a > 0 && b > math.MaxInt32-a {
+	// enter exception if a+b results in overflow or underflow
+	if (a > 0 && b > math.MaxInt32-a) ||
+		(a < 0 && b < math.MinInt32-a) {
 		cpu.enterException(EXC_OVERFLOW)
 	}
 
@@ -796,7 +800,8 @@ func (cpu *CPU) OpSUB(opcode uint32) {
 	a := int32(cpu.reg(rs))
 	b := int32(cpu.reg(rt))
 
-	if b < 0 && a > math.MaxInt32+b {
+	if (b < 0 && a > math.MaxInt32+b) ||
+		(b > 0 && a < math.MinInt32+b) {
 		cpu.enterException(EXC_OVERFLOW)
 	}
 
