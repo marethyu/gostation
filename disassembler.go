@@ -73,6 +73,10 @@ func (cpu *CPU) DisassembleSecondaryOpcode(opcode uint32) {
 		cpu.DisOpSRA(opcode)
 	case 0x04:
 		cpu.DisOpSLLV(opcode)
+	case 0x06:
+		cpu.DisOpSRLV(opcode)
+	case 0x07:
+		cpu.DisOpSRAV(opcode)
 	case 0x08:
 		cpu.DisOpJR(opcode)
 	case 0x09:
@@ -87,6 +91,8 @@ func (cpu *CPU) DisassembleSecondaryOpcode(opcode uint32) {
 		cpu.DisOpMFLO(opcode)
 	case 0x13:
 		cpu.DisOpMTLO(opcode)
+	case 0x19:
+		cpu.DisOpMULTU(opcode)
 	case 0x1a:
 		cpu.DisOpDIV(opcode)
 	case 0x1b:
@@ -101,6 +107,8 @@ func (cpu *CPU) DisassembleSecondaryOpcode(opcode uint32) {
 		cpu.DisOpAND(opcode)
 	case 0x25:
 		cpu.DisOpOR(opcode)
+	case 0x27:
+		cpu.DisOpNOR(opcode)
 	case 0x2a:
 		cpu.DisOpSLT(opcode)
 	case 0x2b:
@@ -507,6 +515,34 @@ func (cpu *CPU) DisOpSLLV(opcode uint32) {
 //
 //	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
 //
+// 000000 | rs   | rt   | rd   | N/A  | 0001xx | shift-reg
+// srlv rd,rt,rs          rd = rt SHR (rs AND 1Fh)
+func (cpu *CPU) DisOpSRLV(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	fmt.Printf("%-7s r%d,r%d,r%d", "srlv", rd, rt, rs)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | rs   | rt   | rd   | N/A  | 0001xx | shift-reg
+// srav rd,rt,rs          rd = rt SAR (rs AND 1Fh)
+func (cpu *CPU) DisOpSRAV(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	fmt.Printf("%-7s r%d,r%d,r%d", "srav", rd, rt, rs)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
 // 000000 | rs   | N/A  | N/A  | N/A  | 001000 | jr
 // jr     rs          pc=rs
 func (cpu *CPU) DisOpJR(opcode uint32) {
@@ -586,6 +622,19 @@ func (cpu *CPU) DisOpMTLO(opcode uint32) {
 	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d", "mtlo", rs)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | rs   | rt   | N/A  | N/A  | 0110xx | mul/div
+// multu  rs,rt           hi:lo = rs*rt (unsigned)
+func (cpu *CPU) DisOpMULTU(opcode uint32) {
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	fmt.Printf("%-7s r%d,r%d", "multu", rs, rt)
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -684,6 +733,20 @@ func (cpu *CPU) DisOpOR(opcode uint32) {
 	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,r%d,r%d", "or", rd, rs, rt)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
+// nor  rd,rs,rt         rd = FFFFFFFFh XOR (rs OR rt)
+func (cpu *CPU) DisOpNOR(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	fmt.Printf("%-7s r%d,r%d,r%d", "nor", rd, rs, rt)
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |

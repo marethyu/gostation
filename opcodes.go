@@ -514,6 +514,36 @@ func (cpu *CPU) OpSLLV(opcode uint32) {
 //
 //	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
 //
+// 000000 | rs   | rt   | rd   | N/A  | 0001xx | shift-reg
+// srlv rd,rt,rs          rd = rt SHR (rs AND 1Fh)
+func (cpu *CPU) OpSRLV(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	val := cpu.reg(rt) >> (cpu.reg(rs) & 0x1f)
+	cpu.modifyReg(rd, val)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | rs   | rt   | rd   | N/A  | 0001xx | shift-reg
+// srav rd,rt,rs          rd = rt SAR (rs AND 1Fh)
+func (cpu *CPU) OpSRAV(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	val := int32(cpu.reg(rt)) >> (cpu.reg(rs) & 0x1f)
+	cpu.modifyReg(rd, uint32(val))
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
 // 000000 | rs   | N/A  | N/A  | N/A  | 001000 | jr
 // jr     rs          pc=rs
 func (cpu *CPU) OpJR(opcode uint32) {
@@ -596,6 +626,24 @@ func (cpu *CPU) OpMTLO(opcode uint32) {
 	rs := int(GetValue(opcode, 21, 5))
 
 	cpu.lo = cpu.reg(rs)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | rs   | rt   | N/A  | N/A  | 0110xx | mul/div
+// multu  rs,rt           hi:lo = rs*rt (unsigned)
+func (cpu *CPU) OpMULTU(opcode uint32) {
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	a := uint64(cpu.reg(rs))
+	b := uint64(cpu.reg(rt))
+	val := a * b
+
+	cpu.hi = uint32(val >> 32)
+	cpu.lo = uint32(val & 0xffffffff)
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -731,6 +779,22 @@ func (cpu *CPU) OpOR(opcode uint32) {
 	rs := int(GetValue(opcode, 21, 5))
 
 	val := cpu.reg(rs) | cpu.reg(rt)
+	cpu.modifyReg(rd, val)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
+// nor  rd,rs,rt         rd = FFFFFFFFh XOR (rs OR rt)
+func (cpu *CPU) OpNOR(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	val := cpu.reg(rs) | cpu.reg(rt)
+	val = ^val
 	cpu.modifyReg(rd, val)
 }
 

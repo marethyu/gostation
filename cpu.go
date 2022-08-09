@@ -164,6 +164,10 @@ func (cpu *CPU) ExecuteSecondaryOpcode(opcode uint32) {
 		cpu.OpSRA(opcode)
 	case 0x04:
 		cpu.OpSLLV(opcode)
+	case 0x06:
+		cpu.OpSRLV(opcode)
+	case 0x07:
+		cpu.OpSRAV(opcode)
 	case 0x08:
 		cpu.OpJR(opcode)
 	case 0x09:
@@ -178,6 +182,8 @@ func (cpu *CPU) ExecuteSecondaryOpcode(opcode uint32) {
 		cpu.OpMFLO(opcode)
 	case 0x13:
 		cpu.OpMTLO(opcode)
+	case 0x19:
+		cpu.OpMULTU(opcode)
 	case 0x1a:
 		cpu.OpDIV(opcode)
 	case 0x1b:
@@ -192,6 +198,8 @@ func (cpu *CPU) ExecuteSecondaryOpcode(opcode uint32) {
 		cpu.OpAND(opcode)
 	case 0x25:
 		cpu.OpOR(opcode)
+	case 0x27:
+		cpu.OpNOR(opcode)
 	case 0x2a:
 		cpu.OpSLT(opcode)
 	case 0x2b:
