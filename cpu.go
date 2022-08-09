@@ -198,6 +198,8 @@ func (cpu *CPU) ExecuteSecondaryOpcode(opcode uint32) {
 		cpu.OpAND(opcode)
 	case 0x25:
 		cpu.OpOR(opcode)
+	case 0x26:
+		cpu.OpXOR(opcode)
 	case 0x27:
 		cpu.OpNOR(opcode)
 	case 0x2a:

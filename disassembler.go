@@ -107,6 +107,8 @@ func (cpu *CPU) DisassembleSecondaryOpcode(opcode uint32) {
 		cpu.DisOpAND(opcode)
 	case 0x25:
 		cpu.DisOpOR(opcode)
+	case 0x26:
+		cpu.DisOpXOR(opcode)
 	case 0x27:
 		cpu.DisOpNOR(opcode)
 	case 0x2a:
@@ -733,6 +735,20 @@ func (cpu *CPU) DisOpOR(opcode uint32) {
 	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,r%d,r%d", "or", rd, rs, rt)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
+// xor  rd,rs,rt         rd = rs XOR rt
+func (cpu *CPU) DisOpXOR(opcode uint32) {
+	rd := int(GetValue(opcode, 11, 5))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	fmt.Printf("%-7s r%d,r%d,r%d", "xor", rd, rs, rt)
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
