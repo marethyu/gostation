@@ -155,6 +155,22 @@ func (cpu *CPU) ExecutePrimaryOpcode(opcode uint32) {
 		cpu.OpStoreWord(opcode)
 	case 0x2e:
 		cpu.OpStoreWordRight(opcode)
+	case 0x30:
+		cpu.OpLWC0(opcode)
+	case 0x31:
+		cpu.OpLWC1(opcode)
+	case 0x32:
+		cpu.OpLWC2(opcode)
+	case 0x33:
+		cpu.OpLWC3(opcode)
+	case 0x38:
+		cpu.OpSWC0(opcode)
+	case 0x39:
+		cpu.OpSWC1(opcode)
+	case 0x3a:
+		cpu.OpSWC2(opcode)
+	case 0x3b:
+		cpu.OpSWC3(opcode)
 	case 0b010000:
 		cpu.ExecuteCOP0Opcode(opcode)
 	case 0b010001:
@@ -164,7 +180,8 @@ func (cpu *CPU) ExecutePrimaryOpcode(opcode uint32) {
 	case 0b010011:
 		cpu.ExecuteCOP3Opcode(opcode)
 	default:
-		panic(fmt.Sprintf("[CPU::ExecutePrimaryOpcode] Unknown Opcode: %x", opcode))
+		fmt.Printf("[CPU::ExecutePrimaryOpcode] Unknown Opcode: %x\n", opcode)
+		cpu.OpIllegal()
 	}
 }
 
@@ -229,7 +246,8 @@ func (cpu *CPU) ExecuteSecondaryOpcode(opcode uint32) {
 	case 0x2b:
 		cpu.OpSLTU(opcode)
 	default:
-		panic(fmt.Sprintf("[CPU::ExecuteSecondaryOpcode] Unknown Opcode: %x", opcode))
+		fmt.Printf("[CPU::ExecuteSecondaryOpcode] Unknown Opcode: %x\n", opcode)
+		cpu.OpIllegal()
 	}
 }
 
@@ -244,7 +262,8 @@ func (cpu *CPU) ExecuteCOP0Opcode(opcode uint32) {
 	case 0b10000:
 		cpu.OpRFE(opcode)
 	default:
-		panic(fmt.Sprintf("[CPU::ExecuteCOP0Opcode] Unknown Opcode: %x", opcode))
+		fmt.Printf("[CPU::ExecuteCOP0Opcode] Unknown Opcode: %x\n", opcode)
+		cpu.OpIllegal()
 	}
 }
 

@@ -64,6 +64,22 @@ func (cpu *CPU) DisassemblePrimaryOpcode(opcode uint32) {
 		cpu.DisOpStoreWord(opcode)
 	case 0x2e:
 		cpu.DisOpStoreWordRight(opcode)
+	case 0x30:
+		cpu.DisOpLWC0(opcode)
+	case 0x31:
+		cpu.DisOpLWC1(opcode)
+	case 0x32:
+		cpu.DisOpLWC2(opcode)
+	case 0x33:
+		cpu.DisOpLWC3(opcode)
+	case 0x38:
+		cpu.DisOpSWC0(opcode)
+	case 0x39:
+		cpu.DisOpSWC1(opcode)
+	case 0x3a:
+		cpu.DisOpSWC2(opcode)
+	case 0x3b:
+		cpu.DisOpSWC3(opcode)
 	case 0b010000:
 		cpu.DisassembleCOP0Opcode(opcode)
 	case 0b010001:
@@ -73,7 +89,7 @@ func (cpu *CPU) DisassemblePrimaryOpcode(opcode uint32) {
 	case 0b010011:
 		cpu.DisassembleCOP3Opcode(opcode)
 	default:
-		fmt.Printf("[CPU::DisassemblePrimaryOpcode] Unknown Opcode: %x\n", opcode)
+		fmt.Printf("[CPU::DisassemblePrimaryOpcode] Unknown Opcode: %x", opcode)
 	}
 }
 
@@ -138,7 +154,7 @@ func (cpu *CPU) DisassembleSecondaryOpcode(opcode uint32) {
 	case 0x2b:
 		cpu.DisOpSLTU(opcode)
 	default:
-		fmt.Printf("[CPU::DisassembleSecondaryOpcode] Unknown Opcode: %x\n", opcode)
+		fmt.Printf("[CPU::DisassembleSecondaryOpcode] Unknown Opcode: %x", opcode)
 	}
 }
 
@@ -153,7 +169,7 @@ func (cpu *CPU) DisassembleCOP0Opcode(opcode uint32) {
 	case 0b10000:
 		cpu.DisOpRFE(opcode)
 	default:
-		fmt.Printf("[CPU::DisassembleCOP0Opcode] Unknown Opcode: %x\n", opcode)
+		fmt.Printf("[CPU::DisassembleCOP0Opcode] Unknown Opcode: %x", opcode)
 	}
 }
 
@@ -196,7 +212,7 @@ func (cpu *CPU) DisOpBcondZ(opcode uint32) {
 	case 0b10001:
 		fmt.Printf("%-7s r%d,%08x", "bgezal", rs, imm16)
 	default:
-		fmt.Printf("[CPU::DisOpBcondZ] Unknown condition: %x\n", cond)
+		fmt.Printf("[CPU::DisOpBcondZ] Unknown condition: %x", cond)
 	}
 }
 
@@ -937,7 +953,7 @@ func (cpu *CPU) DisOpSLTU(opcode uint32) {
 }
 
 /*
-CDisOp0 opcodes are implemented here
+Coprocessor opcodes are implemented here
 */
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -974,9 +990,41 @@ func (cpu *CPU) DisOpMTC0(opcode uint32) {
 // rfe
 func (cpu *CPU) DisOpRFE(opcode uint32) {
 	if GetValue(opcode, 0, 6) != 0b010000 {
-		fmt.Printf("[CPU::DisOpRFE] Unknown Opcode: %x\n", opcode)
+		fmt.Printf("[CPU::DisOpRFE] Unknown Opcode: %x", opcode)
 		return
 	}
 
 	fmt.Printf("rfe")
+}
+
+func (cpu *CPU) DisOpLWC0(opcode uint32) {
+	fmt.Println("COP0 does not support lwc0")
+}
+
+func (cpu *CPU) DisOpLWC1(opcode uint32) {
+	fmt.Println("COP1 does not exist in Playstation!")
+}
+
+func (cpu *CPU) DisOpLWC2(opcode uint32) {
+	fmt.Println("GTE lwc2")
+}
+
+func (cpu *CPU) DisOpLWC3(opcode uint32) {
+	fmt.Println("COP3 does not exist in Playstation!")
+}
+
+func (cpu *CPU) DisOpSWC0(opcode uint32) {
+	fmt.Println("COP0 does not support swc0")
+}
+
+func (cpu *CPU) DisOpSWC1(opcode uint32) {
+	fmt.Println("COP1 does not exist in Playstation!")
+}
+
+func (cpu *CPU) DisOpSWC2(opcode uint32) {
+	fmt.Println("GTE swc2")
+}
+
+func (cpu *CPU) DisOpSWC3(opcode uint32) {
+	fmt.Println("COP3 does not exist in Playstation!")
 }

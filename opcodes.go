@@ -11,6 +11,10 @@ https://psx-spx.consoledev.net/cpuspecifications/
 https://ffhacktics.com/wiki/PSX_instruction_set
 */
 
+func (cpu *CPU) OpIllegal() {
+	cpu.enterException(EXC_RESERVED_INS)
+}
+
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
 //
 //	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
@@ -1103,7 +1107,7 @@ func (cpu *CPU) OpSLTU(opcode uint32) {
 }
 
 /*
-COP0 opcodes are implemented here
+Coprocessor opcodes are implemented here
 */
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -1173,4 +1177,36 @@ func (cpu *CPU) OpRFE(opcode uint32) {
 	mode := cpu.sr & mask
 	cpu.sr &= ^mask
 	cpu.sr |= mode >> 2
+}
+
+func (cpu *CPU) OpLWC0(opcode uint32) {
+	cpu.enterException(EXC_COP_UNUSABLE)
+}
+
+func (cpu *CPU) OpLWC1(opcode uint32) {
+	cpu.enterException(EXC_COP_UNUSABLE)
+}
+
+func (cpu *CPU) OpLWC2(opcode uint32) {
+	panic("[CPU::OpLWC2] GTE is not implemented yet!")
+}
+
+func (cpu *CPU) OpLWC3(opcode uint32) {
+	cpu.enterException(EXC_COP_UNUSABLE)
+}
+
+func (cpu *CPU) OpSWC0(opcode uint32) {
+	cpu.enterException(EXC_COP_UNUSABLE)
+}
+
+func (cpu *CPU) OpSWC1(opcode uint32) {
+	cpu.enterException(EXC_COP_UNUSABLE)
+}
+
+func (cpu *CPU) OpSWC2(opcode uint32) {
+	panic("[CPU::OpSWC2] GTE is not implemented yet!")
+}
+
+func (cpu *CPU) OpSWC3(opcode uint32) {
+	cpu.enterException(EXC_COP_UNUSABLE)
 }
