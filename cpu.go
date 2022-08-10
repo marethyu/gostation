@@ -149,8 +149,12 @@ func (cpu *CPU) ExecutePrimaryOpcode(opcode uint32) {
 		cpu.OpStoreByte(opcode)
 	case 0x29:
 		cpu.OpStoreHWord(opcode)
+	case 0x2a:
+		cpu.OpStoreWordLeft(opcode)
 	case 0x2b:
 		cpu.OpStoreWord(opcode)
+	case 0x2e:
+		cpu.OpStoreWordRight(opcode)
 	case 0b010000:
 		cpu.ExecuteCOP0Opcode(opcode)
 	case 0b010001:

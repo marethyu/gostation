@@ -58,8 +58,12 @@ func (cpu *CPU) DisassemblePrimaryOpcode(opcode uint32) {
 		cpu.DisOpStoreByte(opcode)
 	case 0x29:
 		cpu.DisOpStoreHWord(opcode)
+	case 0x2a:
+		cpu.DisOpStoreWordLeft(opcode)
 	case 0x2b:
 		cpu.DisOpStoreWord(opcode)
+	case 0x2e:
+		cpu.DisOpStoreWordRight(opcode)
 	case 0b010000:
 		cpu.DisassembleCOP0Opcode(opcode)
 	case 0b010001:
@@ -516,6 +520,20 @@ func (cpu *CPU) DisOpStoreHWord(opcode uint32) {
 //	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
 //
 // 101xxx | rs   | rt   | <--immediate16bit--> | store rt,[rs+imm]
+// swl   rt,imm(rs)     store left  bits of rt to memory (usually imm+3)
+func (cpu *CPU) DisOpStoreWordLeft(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	fmt.Printf("%-7s r%d,%08x(r%d)", "swl", rt, imm16, rs)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 101xxx | rs   | rt   | <--immediate16bit--> | store rt,[rs+imm]
 // sw  rt,imm(rs)    [imm+rs]=rt             ;store 32bit
 func (cpu *CPU) DisOpStoreWord(opcode uint32) {
 	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
@@ -523,6 +541,20 @@ func (cpu *CPU) DisOpStoreWord(opcode uint32) {
 	rs := int(GetValue(opcode, 21, 5))
 
 	fmt.Printf("%-7s r%d,%08x(r%d)", "sw", rt, imm16, rs)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 101xxx | rs   | rt   | <--immediate16bit--> | store rt,[rs+imm]
+// swr   rt,imm(rs)     store right bits of rt to memory (usually imm+0)
+func (cpu *CPU) DisOpStoreWordRight(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	fmt.Printf("%-7s r%d,%08x(r%d)", "swr", rt, imm16, rs)
 }
 
 /*

@@ -373,7 +373,7 @@ func (cpu *CPU) OpLoadWordLeft(opcode uint32) {
 		 lwl will fill the ? part in $r11 with the first byte (least significant part) of word located at B which is 4
 	*/
 	case 0:
-		val = (val & 0x00ffffff) | (aligned_word << 24)
+		val = (val & 0x00ffffff) | (aligned_word << 24) // the least significant byte of aligned word (bytes 4-7 in example) is placed in the most significant byte of val
 	/* in this case the lwr instruction already put the right 2 bytes of word located at aligned_address+2 on right 2 bytes of val, we need to fill the first two bytes.
 	for example, we want to fill $r11 with ┃ 2 ┆ 3 ┆ 4 ┆ 5 ┃.
 
@@ -555,6 +555,39 @@ func (cpu *CPU) OpStoreHWord(opcode uint32) {
 //	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
 //
 // 101xxx | rs   | rt   | <--immediate16bit--> | store rt,[rs+imm]
+// swl   rt,imm(rs)     store left  bits of rt to memory (usually imm+3)
+// see also CPU::OpStoreWordRight
+func (cpu *CPU) OpStoreWordLeft(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	addr := cpu.reg(rs) + imm16
+	val := cpu.reg(rt)
+
+	mask := ^uint32(0b11) // bitmask to strip of lower two bits of the address to get aligned address
+	aligned_addr := addr & mask
+	aligned_word := cpu.Core.Bus.Read32(aligned_addr)
+
+	switch addr % 4 {
+	case 0:
+		val = (aligned_word & 0xffffff00) | (val >> 24) // the most significant byte of val is put in the least significant byte of aligned word
+	case 1:
+		val = (aligned_word & 0xffff0000) | (val >> 16) // yea u get the idea
+	case 2:
+		val = (aligned_word & 0xff000000) | (val >> 8)
+	case 3:
+		val = (aligned_word & 0x00000000) | (val >> 0)
+	}
+
+	cpu.Core.Bus.Write32(aligned_addr, val)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 101xxx | rs   | rt   | <--immediate16bit--> | store rt,[rs+imm]
 // sw  rt,imm(rs)    [imm+rs]=rt             ;store 32bit
 func (cpu *CPU) OpStoreWord(opcode uint32) {
 	if TestBit(cpu.sr, 16) {
@@ -575,6 +608,38 @@ func (cpu *CPU) OpStoreWord(opcode uint32) {
 		val := cpu.reg(rt)
 		cpu.Core.Bus.Write32(addr, val)
 	}
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 101xxx | rs   | rt   | <--immediate16bit--> | store rt,[rs+imm]
+// swr   rt,imm(rs)     store right bits of rt to memory (usually imm+0)
+func (cpu *CPU) OpStoreWordRight(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	addr := cpu.reg(rs) + imm16
+	val := cpu.reg(rt)
+
+	mask := ^uint32(0b11) // bitmask to strip of lower two bits of the address to get aligned address
+	aligned_addr := addr & mask
+	aligned_word := cpu.Core.Bus.Read32(aligned_addr)
+
+	switch addr % 4 {
+	case 0:
+		val = (aligned_word & 0x00000000) | (val << 0)
+	case 1:
+		val = (aligned_word & 0x000000ff) | (val << 8) // the most significant 3 bytes of aligned word gets filled with the least significant 3 bytes of val
+	case 2:
+		val = (aligned_word & 0x0000ffff) | (val << 16)
+	case 3:
+		val = (aligned_word & 0x00ffffff) | (val << 24)
+	}
+
+	cpu.Core.Bus.Write32(aligned_addr, val)
 }
 
 /*
