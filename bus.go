@@ -188,7 +188,7 @@ func (bus *Bus) Read32(address uint32) uint32 {
 
 	if bus.GPU.Contains(address) {
 		if address == 0x1f801814 {
-			return 0x10000000 // TODO
+			return 0x1c000000 // TODO
 		}
 		return bus.GPU.Read32(address)
 	}

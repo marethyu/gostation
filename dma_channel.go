@@ -74,6 +74,35 @@ func NewDMAChannel() *DMAChannel {
 	}
 }
 
+func (channel *DMAChannel) Active() bool {
+	switch channel.syncMode {
+	case SYNC_ALL_AT_ONCE:
+		return channel.start && channel.trigger
+	default:
+		return channel.start
+	}
+}
+
+func (channel *DMAChannel) TransferSize() uint32 {
+	switch channel.syncMode {
+	case SYNC_ALL_AT_ONCE:
+		return uint32(channel.blockSize)
+	case SYNC_REQUEST:
+		return uint32(channel.blockSize) * uint32(channel.blockAmount)
+	case SYNC_LINKED_LIST:
+		return 0 /* the size of linked list is not known ahead of time */
+	}
+
+	return 0
+}
+
+func (channel *DMAChannel) Done() {
+	channel.start = false
+	channel.trigger = false
+
+	// TODO interrupts?
+}
+
 func (channel *DMAChannel) Read32(offset uint32) uint32 {
 	switch offset {
 	case 0x0:

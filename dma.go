@@ -42,6 +42,94 @@ func (dma *DMA) Contains(address uint32) bool {
 	return address >= DMA_OFFSET && address < (DMA_OFFSET+DMA_SIZE)
 }
 
+func (dma *DMA) DoDMATransfer(port int) {
+	// addresses to RAM must be masked
+	// the size of RAM is 0x200000 and we want to make sure that addr can fit inside the ram so the mask is 0x200000-1 but
+	// the first nybble is 'c' because we want aligned address
+	var mask uint32 = 0x1ffffc
+
+	switch dma.channel[port].syncMode {
+	case SYNC_LINKED_LIST:
+		addr := dma.channel[port].baseAddress & mask
+
+		if !dma.channel[port].RAMToDevice {
+			panic("[DMA::DoDMATransfer] linked list mode only works for ram to device")
+		}
+
+		for {
+			// header of a packet
+			// high 8 bits defines size
+			// low 24 bits defines address to next packet or 0xffffff if last element
+			header := dma.Core.Bus.Ram.Read32(addr)
+
+			size := header >> 24
+
+			for size > 0 {
+				addr = (addr + 4) & mask
+				command := dma.Core.Bus.Ram.Read32(addr)
+
+				fmt.Printf("[DMA::DoDMATransfer] GPU command: %x\n", command)
+
+				size -= 1
+			}
+
+			// last element (can't use 0xffffff for some reason)
+			if TestBit(header, 23) {
+				break
+			}
+
+			addr = header & mask
+		}
+	default: /* block copy */
+		addr := int(dma.channel[port].baseAddress)
+		increment := 4
+		if dma.channel[port].addressDecrement {
+			increment = -4
+		}
+
+		size := dma.channel[port].TransferSize()
+		if size == 0 {
+			panic("[DMA::DoDMATransfer] size is zero during block copy?")
+		}
+
+		for size > 0 {
+			cur_addr := uint32(addr) & mask
+
+			if dma.channel[port].RAMToDevice {
+				data := dma.Core.Bus.Ram.Read32(cur_addr)
+
+				switch port {
+				case DMA2_GPU:
+					fmt.Printf("[DMA::DoDMATransfer] GPU data: %x\n", data)
+				default:
+					panic(fmt.Sprintf("[DMA::DoDMATransfer] unsupported port (%d) during ram to device block copy", port))
+				}
+			} else {
+				var data uint32
+				switch port {
+				case DMA6_OTC:
+					if size == 1 {
+						// last element of the ordering table
+						data = 0xffffff
+					} else {
+						// pointer to previous entry
+						data = uint32(addr-4) & 0x1fffff
+					}
+				default:
+					panic(fmt.Sprintf("[DMA::DoDMATransfer] unsupported port (%d) during device to ram block copy", port))
+				}
+
+				dma.Core.Bus.Ram.Write32(cur_addr, data)
+			}
+
+			addr += increment
+			size -= 1
+		}
+	}
+
+	dma.channel[port].Done()
+}
+
 func (dma *DMA) Read32(address uint32) uint32 {
 	byte := address & 0x000000ff
 	nybble_lo := byte & 0xf
@@ -49,8 +137,7 @@ func (dma *DMA) Read32(address uint32) uint32 {
 
 	switch nybble_hi {
 	case 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe:
-		idx := nybble_hi - 0x8
-		return dma.channel[idx].Read32(nybble_lo)
+		return dma.channel[nybble_hi-0x8].Read32(nybble_lo)
 	case 0xf:
 		switch nybble_lo {
 		case 0x0:
@@ -81,8 +168,13 @@ func (dma *DMA) Write32(address uint32, data uint32) {
 
 	switch nybble_hi {
 	case 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe:
-		idx := nybble_hi - 0x8
-		dma.channel[idx].Write32(nybble_lo, data)
+		port := int(nybble_hi - 0x8)
+
+		dma.channel[port].Write32(nybble_lo, data)
+
+		if dma.channel[port].Active() {
+			dma.DoDMATransfer(port)
+		}
 	case 0xf:
 		switch nybble_lo {
 		case 0x0:
