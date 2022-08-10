@@ -21,6 +21,10 @@ func GetValue(n uint32, pos int, len int) uint32 {
 	return (n >> pos) & ((1 << len) - 1)
 }
 
+func PackValue(n *uint32, pos int, data uint32, size uint32) {
+	*n |= (data & ((1 << size) - 1)) << pos
+}
+
 func SignExtendedByte(n uint8) uint32 {
 	return uint32(int8(n))
 }

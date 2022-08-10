@@ -86,12 +86,12 @@ func (channel *DMAChannel) Read32(offset uint32) uint32 {
 		ModifyBit(&control, 0, channel.RAMToDevice)
 		ModifyBit(&control, 1, channel.addressDecrement)
 		ModifyBit(&control, 8, channel.choppingEnable)
-		control |= uint32(channel.syncMode&0b11) << 9
-		control |= uint32(channel.choppingDMAWind&0b111) << 16
-		control |= uint32(channel.choppingCPUWind&0b111) << 20
+		PackValue(&control, 9, uint32(channel.syncMode), 2)
+		PackValue(&control, 16, uint32(channel.choppingDMAWind), 3)
+		PackValue(&control, 20, uint32(channel.choppingCPUWind), 3)
 		ModifyBit(&control, 24, channel.start)
 		ModifyBit(&control, 28, channel.trigger)
-		control |= uint32(channel.unknown&0b11) << 29
+		PackValue(&control, 29, uint32(channel.unknown), 2)
 
 		return control
 	default:

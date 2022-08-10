@@ -58,11 +58,11 @@ func (dma *DMA) Read32(address uint32) uint32 {
 		case 0x4:
 			var dicr uint32 = 0
 
-			dicr |= uint32(dma.unknown)
+			PackValue(&dicr, 0, uint32(dma.unknown), 6)
 			ModifyBit(&dicr, 15, dma.forceIrq)
-			dicr |= uint32(dma.dmaIE&0b01111111) << 16
+			PackValue(&dicr, 16, uint32(dma.dmaIE), 7)
 			ModifyBit(&dicr, 23, dma.dmaIME)
-			dicr |= uint32(dma.dmaIRQFlag&0b01111111) << 24
+			PackValue(&dicr, 24, uint32(dma.dmaIRQFlag), 7)
 			ModifyBit(&dicr, 31, dma.IRQMasterFlag())
 
 			return dicr
