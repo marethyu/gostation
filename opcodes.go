@@ -332,6 +332,82 @@ func (cpu *CPU) OpLoadHWord(opcode uint32) {
 //	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
 //
 // 100xxx | rs   | rt   | <--immediate16bit--> | load rt,[rs+imm]
+// lwl   rt,imm(rs)     load left  bits of rt from memory (usually imm+3)
+// IMPORTANT NOTE: "left" refers to the *most* significant part not least significant part
+// see also CPU::OpLoadWordRight
+func (cpu *CPU) OpLoadWordLeft(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	addr := cpu.reg(rs) + imm16
+
+	var val uint32
+	if cpu.pending_load && cpu.pending_r == rt {
+		// Bypass delay slot if needed
+		val = cpu.pending_val
+	} else {
+		val = cpu.reg(rt)
+	}
+
+	mask := ^uint32(0b11) // bitmask to strip of lower two bits of the address to get aligned address
+	aligned_word := cpu.Core.Bus.Read32(addr & mask)
+
+	// yea bro it's unintuitive compared to lwr but lwl instructions are frequently paired with offset (imm) of 3 for some obscure reason
+	switch addr % 4 {
+	/* in this case the lwr instruction already put the right 3 bytes of word located at aligned_address+1 on right 3 bytes of val, we need to fill the first byte.
+	for example, we want to fill $r11 with ┃ 1 ┆ 2 ┆ 3 ┆ 4 ┃ (┃ least significant --> most significant ┃).
+
+		memory:
+		     ├ A             ┤
+	     ┃ 0 ┆ 1 ┆ 2 ┆ 3 ┃ 4 ┆ 5 ┆ 6 ┆ 7 ┃
+
+		 $r7=A
+		 after lwr $r11,0($r7): $r11=┃ 1 ┆ 2 ┆ 3 ┆ ? ┃
+
+		 let B=A+3
+		 memory:
+		                 ├ B             ┤
+	     ┃ 0 ┆ 1 ┆ 2 ┆ 3 ┃ 4 ┆ 5 ┆ 6 ┆ 7 ┃
+
+		 lwl will fill the ? part in $r11 with the first byte (least significant part) of word located at B which is 4
+	*/
+	case 0:
+		val = (val & 0x00ffffff) | (aligned_word << 24)
+	/* in this case the lwr instruction already put the right 2 bytes of word located at aligned_address+2 on right 2 bytes of val, we need to fill the first two bytes.
+	for example, we want to fill $r11 with ┃ 2 ┆ 3 ┆ 4 ┆ 5 ┃.
+
+		memory:
+		         ├ A             ┤
+	     ┃ 0 ┆ 1 ┆ 2 ┆ 3 ┃ 4 ┆ 5 ┆ 6 ┆ 7 ┃
+
+		 $r7=A
+		 after lwr $r11,0($r7): $r11=┃ 2 ┆ 3 ┆ ? ┆ ? ┃
+
+		 let B=A+3
+		 memory:
+		                 ├ B             ┤
+	     ┃ 0 ┆ 1 ┆ 2 ┆ 3 ┃ 4 ┆ 5 ┆ 6 ┆ 7 ┃
+
+		 lwl will fill the ┆ ? ┆ ? ┆ part in $r11 with the first two bytes (least significant part) of word located at B which is ┆ 4 ┆ 5 ┆
+	*/
+	case 1:
+		val = (val & 0x0000ffff) | (aligned_word << 16)
+	/* ya should get the idea how it works at dis point */
+	case 2:
+		val = (val & 0x000000ff) | (aligned_word << 8)
+	case 3:
+		val = (val & 0x00000000) | (aligned_word << 0)
+	}
+
+	cpu.loadDelaySlotInit(rt, val)
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 100xxx | rs   | rt   | <--immediate16bit--> | load rt,[rs+imm]
 // lw  rt,imm(rs)    rt=[imm+rs]  ;word
 func (cpu *CPU) OpLoadWord(opcode uint32) {
 	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
@@ -386,6 +462,44 @@ func (cpu *CPU) OpLoadHWordU(opcode uint32) {
 		val := cpu.Core.Bus.Read16(addr)
 		cpu.loadDelaySlotInit(rt, uint32(val))
 	}
+}
+
+// 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
+//
+//	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
+//
+// 100xxx | rs   | rt   | <--immediate16bit--> | load rt,[rs+imm]
+// lwr   rt,imm(rs)     load right bits of rt from memory (usually imm+0)
+func (cpu *CPU) OpLoadWordRight(opcode uint32) {
+	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
+	rt := int(GetValue(opcode, 16, 5))
+	rs := int(GetValue(opcode, 21, 5))
+
+	addr := cpu.reg(rs) + imm16
+
+	var val uint32
+	if cpu.pending_load && cpu.pending_r == rt {
+		// Bypass delay slot if needed
+		val = cpu.pending_val
+	} else {
+		val = cpu.reg(rt)
+	}
+
+	mask := ^uint32(0b11) // bitmask to strip of lower two bits of the address to get aligned address
+	aligned_word := cpu.Core.Bus.Read32(addr & mask)
+
+	switch addr % 4 {
+	case 0:
+		val = (val & 0x00000000) | (aligned_word >> 0)
+	case 1:
+		val = (val & 0xff000000) | (aligned_word >> 8)
+	case 2:
+		val = (val & 0xffff0000) | (aligned_word >> 16)
+	case 3:
+		val = (val & 0xffffff00) | (aligned_word >> 24)
+	}
+
+	cpu.loadDelaySlotInit(rt, val)
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
