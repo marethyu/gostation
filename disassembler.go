@@ -73,7 +73,7 @@ func (cpu *CPU) DisassemblePrimaryOpcode(opcode uint32) {
 	case 0b010011:
 		cpu.DisassembleCOP3Opcode(opcode)
 	default:
-		panic(fmt.Sprintf("[CPU::DisassemblePrimaryOpcode] Unknown Opcode: %x", opcode))
+		fmt.Printf("[CPU::DisassemblePrimaryOpcode] Unknown Opcode: %x\n", opcode)
 	}
 }
 
@@ -138,7 +138,7 @@ func (cpu *CPU) DisassembleSecondaryOpcode(opcode uint32) {
 	case 0x2b:
 		cpu.DisOpSLTU(opcode)
 	default:
-		panic(fmt.Sprintf("[CPU::DisassembleSecondaryOpcode] Unknown Opcode: %x", opcode))
+		fmt.Printf("[CPU::DisassembleSecondaryOpcode] Unknown Opcode: %x\n", opcode)
 	}
 }
 
@@ -153,7 +153,7 @@ func (cpu *CPU) DisassembleCOP0Opcode(opcode uint32) {
 	case 0b10000:
 		cpu.DisOpRFE(opcode)
 	default:
-		panic(fmt.Sprintf("[CPU::DisassembleCOP0Opcode] Unknown Opcode: %x", opcode))
+		fmt.Printf("[CPU::DisassembleCOP0Opcode] Unknown Opcode: %x\n", opcode)
 	}
 }
 
@@ -196,7 +196,7 @@ func (cpu *CPU) DisOpBcondZ(opcode uint32) {
 	case 0b10001:
 		fmt.Printf("%-7s r%d,%08x", "bgezal", rs, imm16)
 	default:
-		panic(fmt.Sprintf("[CPU::DisOpBcondZ] Unknown condition: %x", cond))
+		fmt.Printf("[CPU::DisOpBcondZ] Unknown condition: %x\n", cond)
 	}
 }
 
@@ -974,7 +974,8 @@ func (cpu *CPU) DisOpMTC0(opcode uint32) {
 // rfe
 func (cpu *CPU) DisOpRFE(opcode uint32) {
 	if GetValue(opcode, 0, 6) != 0b010000 {
-		panic(fmt.Sprintf("[CPU::OpRFE] Unknown opcode: %x", opcode))
+		fmt.Printf("[CPU::DisOpRFE] Unknown Opcode: %x\n", opcode)
+		return
 	}
 
 	fmt.Printf("rfe")
