@@ -3,16 +3,18 @@ package main
 type GoStationCore struct {
 	Bus        *Bus
 	CPU        *CPU
-	Interrupts *Interrupts
+	GPU        *GPU
 	DMA        *DMA
+	Interrupts *Interrupts
 }
 
 func NewCore(pathToBios string) *GoStationCore {
-	core := GoStationCore{nil, nil, nil, nil}
+	core := GoStationCore{}
 	core.Bus = NewBus(&core, pathToBios)
 	core.CPU = NewCPU(&core)
-	core.Interrupts = NewInterrupts(&core)
+	core.GPU = NewGPU(&core)
 	core.DMA = NewDMA(&core)
+	core.Interrupts = NewInterrupts(&core)
 	return &core
 }
 

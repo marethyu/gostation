@@ -43,6 +43,8 @@ func (dma *DMA) Contains(address uint32) bool {
 }
 
 func (dma *DMA) DoDMATransfer(port int) {
+	fmt.Printf("[DMA::DoDMATransfer] Initializing DMA transfer at port %d\n", port)
+
 	// addresses to RAM must be masked
 	// the size of RAM is 0x200000 and we want to make sure that addr can fit inside the ram so the mask is 0x200000-1 but
 	// the first nybble is 'c' because we want aligned address
