@@ -54,6 +54,10 @@ func (dma *DMA) DoDMATransfer(port int) {
 	case SYNC_LINKED_LIST:
 		addr := dma.channel[port].baseAddress & mask
 
+		if port != DMA2_GPU {
+			panic("[DMA::DoDMATransfer] I thought the linked list mode only works for ram to gpu?")
+		}
+
 		if !dma.channel[port].RAMToDevice {
 			panic("[DMA::DoDMATransfer] linked list mode only works for ram to device")
 		}
