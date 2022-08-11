@@ -89,7 +89,7 @@ func (cpu *CPU) DisassemblePrimaryOpcode(opcode uint32) {
 	case 0b010011:
 		cpu.DisassembleCOP3Opcode(opcode)
 	default:
-		fmt.Printf("[CPU::DisassemblePrimaryOpcode] Unknown Opcode: %x", opcode)
+		fmt.Printf("[CPU::DisassemblePrimaryOpcode] Unknown opcode: %x", opcode)
 	}
 }
 
@@ -154,7 +154,7 @@ func (cpu *CPU) DisassembleSecondaryOpcode(opcode uint32) {
 	case 0x2b:
 		cpu.DisOpSLTU(opcode)
 	default:
-		fmt.Printf("[CPU::DisassembleSecondaryOpcode] Unknown Opcode: %x", opcode)
+		fmt.Printf("[CPU::DisassembleSecondaryOpcode] Unknown opcode: %x", opcode)
 	}
 }
 
@@ -169,7 +169,7 @@ func (cpu *CPU) DisassembleCOP0Opcode(opcode uint32) {
 	case 0b10000:
 		cpu.DisOpRFE(opcode)
 	default:
-		fmt.Printf("[CPU::DisassembleCOP0Opcode] Unknown Opcode: %x", opcode)
+		fmt.Printf("[CPU::DisassembleCOP0Opcode] Unknown opcode: %x", opcode)
 	}
 }
 

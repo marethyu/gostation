@@ -30,10 +30,17 @@ const (
 	DMA_DIR_GPUREADtoCPU
 )
 
+/* whut the forking fock why itz long */
 type GPU struct {
 	Core *GoStationCore
 
-	/* 1F801814h - GPUSTAT - GPU Status Register (R) -- whut the forking fock why itz long */
+	/*
+		Information for the most of the fields can be found here:
+		https://psx-spx.consoledev.net/graphicsprocessingunitgpu/#gpu-rendering-attributes
+		https://psx-spx.consoledev.net/graphicsprocessingunitgpu/#gpu-display-control-commands-gp1
+	*/
+
+	/* 1F801814h - GPUSTAT - GPU Status Register (R) */
 	txBase             uint32 /* 0-3   Texture page X Base   (N*64)                              ;GP0(E1h).0-3 */
 	tyBase             uint32 /* 4     Texture page Y Base   (N*256) (ie. 0 or 256)              ;GP0(E1h).4 */
 	semiTransparency   uint8  /* 5-6   Semi Transparency     (0=B/2+F/2, 1=B+F, 2=B-F, 3=B+F/4)  ;GP0(E1h).5-6 */
@@ -71,8 +78,39 @@ type GPU struct {
 	dmaDirection    uint8 /* 29-30 DMA Direction (0=Off, 1=?, 2=CPUtoGP0, 3=GPUREADtoCPU)    ;GP1(04h).0-1 */
 	interlaceOdd    bool  /* 31    Drawing even/odd lines in interlace mode (0=Even or Vblank, 1=Odd) */
 
-	rectTextureXFlip bool /* mirror texture rectangle along the x-axis */
-	rectTextureYFlip bool /* mirror texture rectangle along the y-axis */
+	/* GP0(E1h) - Draw Mode setting (aka "Texpage") */
+	rectTextureXFlip bool /* mirror texture rectangle along the x-axis    ;GP0(E1h).12 */
+	rectTextureYFlip bool /* mirror texture rectangle along the y-axis    ;GP0(E1h).13 */
+
+	/* GP0(E2h) - Texture Window setting */
+	texWindowMaskX   uint32 /* 0-4    Texture window Mask X   (in 8 pixel steps) */
+	texWindowMaskY   uint32 /* 5-9    Texture window Mask Y   (in 8 pixel steps) */
+	texWindowOffsetX uint32 /* 10-14  Texture window Offset X (in 8 pixel steps) */
+	texWindowOffsetY uint32 /* 15-19  Texture window Offset Y (in 8 pixel steps) */
+
+	/* GP0(E3h) - Set Drawing Area top left (X1,Y1) */
+	drawingAreaX1 uint32 /* 0-9    X-coordinate (0..1023) */
+	drawingAreaY1 uint32 /* 10-18  Y-coordinate (0..511) or 10-19  Y-coordinate (0..1023)? */
+
+	/* GP0(E4h) - Set Drawing Area bottom right (X2,Y2) */
+	drawingAreaX2 uint32
+	drawingAreaY2 uint32
+
+	/* GP0(E5h) - Set Drawing Offset (X,Y) */
+	drawingXOffset uint32 /* 0-10   X-offset (-1024..+1023) (usually within X1,X2 of Drawing Area) */
+	drawingYOffset uint32 /* 11-21  Y-offset (-1024..+1023) (usually within Y1,Y2 of Drawing Area) */
+
+	/* GP1(05h) - Start of Display area (in VRAM) */
+	displayVramStartX uint32 /* 0-9   X (0-1023)    (halfword address in VRAM)  (relative to begin of VRAM) */
+	displayVramStartY uint32 /* 10-18 Y (0-511)     (scanline number in VRAM)   (relative to begin of VRAM) */
+
+	/* GP1(06h) - Horizontal Display range (on Screen) */
+	displayHorizX1 uint32 /* 0-11   X1 (260h+0)       ;12bit       ;\counted in video clock units, */
+	displayHorizX2 uint32 /* 12-23  X2 (260h+320*8)   ;12bit       ;/relative to HSYNC */
+
+	/* GP1(07h) - Vertical Display range (on Screen) */
+	displayVertY1 uint32 /* 0-9   Y1 (NTSC=88h-(240/2), (PAL=A3h-(288/2))  ;\scanline numbers on screen, */
+	displayVertY2 uint32 /* 10-19 Y2 (NTSC=88h+(240/2), (PAL=A3h+(288/2))  ;/relative to VSYNC */
 }
 
 func NewGPU(core *GoStationCore) *GPU {
@@ -91,9 +129,9 @@ func NewGPU(core *GoStationCore) *GPU {
 		false,
 		false,
 		0,
-		0,
+		256,
 		false,
-		0,
+		240,
 		false,
 		false,
 		false,
@@ -107,6 +145,22 @@ func NewGPU(core *GoStationCore) *GPU {
 		false,
 		false,
 		false,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
 	}
 }
 
@@ -158,10 +212,15 @@ func (gpu *GPU) ReadStatus() uint32 {
 	return status
 }
 
+func (gpu *GPU) ReadGPUREAD() uint32 {
+	// TODO
+	return 0
+}
+
 func (gpu *GPU) Read32(address uint32) uint32 {
 	switch address {
 	case 0x1f801810:
-		panic("[GPU::Read32] GPUREAD is not implemented yet!")
+		return gpu.ReadGPUREAD()
 	case 0x1f801814:
 		return gpu.ReadStatus()
 	}
@@ -178,7 +237,18 @@ func (gpu *GPU) WriteGP0(data uint32) {
 	case 0xe1:
 		gpu.GP0DrawModeSet(data)
 	default:
-		panic(fmt.Sprintf("[GPU::WriteGP0] Unknown Opcode: %x\n", data))
+		panic(fmt.Sprintf("[GPU::WriteGP0] Unknown command: %x\n", data))
+	}
+}
+
+func (gpu *GPU) WriteGP1(data uint32) {
+	op := data >> 24
+
+	switch op {
+	case 0x00:
+		gpu.GP1Reset()
+	default:
+		panic(fmt.Sprintf("[GPU::WriteGP1] Unknown command: %x\n", data))
 	}
 }
 
@@ -187,6 +257,6 @@ func (gpu *GPU) Write32(address uint32, data uint32) {
 	case 0x1f801810:
 		gpu.WriteGP0(data)
 	case 0x1f801814:
-		panic("[GPU::Write32] GP1 is not implemented yet!")
+		gpu.WriteGP1(data)
 	}
 }

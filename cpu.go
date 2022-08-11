@@ -180,7 +180,7 @@ func (cpu *CPU) ExecutePrimaryOpcode(opcode uint32) {
 	case 0b010011:
 		cpu.ExecuteCOP3Opcode(opcode)
 	default:
-		fmt.Printf("[CPU::ExecutePrimaryOpcode] Unknown Opcode: %x\n", opcode)
+		fmt.Printf("[CPU::ExecutePrimaryOpcode] Unknown opcode: %x\n", opcode)
 		cpu.OpIllegal()
 	}
 }
@@ -246,7 +246,7 @@ func (cpu *CPU) ExecuteSecondaryOpcode(opcode uint32) {
 	case 0x2b:
 		cpu.OpSLTU(opcode)
 	default:
-		fmt.Printf("[CPU::ExecuteSecondaryOpcode] Unknown Opcode: %x\n", opcode)
+		fmt.Printf("[CPU::ExecuteSecondaryOpcode] Unknown opcode: %x\n", opcode)
 		cpu.OpIllegal()
 	}
 }
@@ -262,7 +262,7 @@ func (cpu *CPU) ExecuteCOP0Opcode(opcode uint32) {
 	case 0b10000:
 		cpu.OpRFE(opcode)
 	default:
-		fmt.Printf("[CPU::ExecuteCOP0Opcode] Unknown Opcode: %x\n", opcode)
+		fmt.Printf("[CPU::ExecuteCOP0Opcode] Unknown opcode: %x\n", opcode)
 		cpu.OpIllegal()
 	}
 }
