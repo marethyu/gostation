@@ -111,6 +111,8 @@ type GPU struct {
 	/* GP1(07h) - Vertical Display range (on Screen) */
 	displayVertY1 uint32 /* 0-9   Y1 (NTSC=88h-(240/2), (PAL=A3h-(288/2))  ;\scanline numbers on screen, */
 	displayVertY2 uint32 /* 10-19 Y2 (NTSC=88h+(240/2), (PAL=A3h+(288/2))  ;/relative to VSYNC */
+
+	fifo *FIFO
 }
 
 func NewGPU(core *GoStationCore) *GPU {
@@ -161,6 +163,7 @@ func NewGPU(core *GoStationCore) *GPU {
 		0,
 		0,
 		0,
+		NewFIFO(),
 	}
 }
 
@@ -169,7 +172,7 @@ func (gpu *GPU) Contains(address uint32) bool {
 }
 
 /* some fields are hardcoded for now */
-func (gpu *GPU) ReadStatus() uint32 {
+func (gpu *GPU) GPUSTATUS() uint32 {
 	var status uint32 = 0
 
 	PackValue(&status, 0, uint32(gpu.txBase), 4)
@@ -185,7 +188,8 @@ func (gpu *GPU) ReadStatus() uint32 {
 	ModifyBit(&status, 15, gpu.textureDisable)
 	ModifyBit(&status, 16, gpu.hr2)
 	PackValue(&status, 17, uint32(gpu.hr1), 2)
-	ModifyBit(&status, 19, gpu.vertRes)
+	// Fuck infinite loops
+	// ModifyBit(&status, 19, gpu.vertRes)
 	ModifyBit(&status, 20, gpu.PALMode)
 	ModifyBit(&status, 21, gpu.displayColourDepth)
 	ModifyBit(&status, 22, gpu.verticalInterlace)
@@ -212,7 +216,7 @@ func (gpu *GPU) ReadStatus() uint32 {
 	return status
 }
 
-func (gpu *GPU) ReadGPUREAD() uint32 {
+func (gpu *GPU) GPUREAD() uint32 {
 	// TODO
 	return 0
 }
@@ -220,39 +224,44 @@ func (gpu *GPU) ReadGPUREAD() uint32 {
 func (gpu *GPU) Read32(address uint32) uint32 {
 	switch address {
 	case 0x1f801810:
-		return gpu.ReadGPUREAD()
+		return gpu.GPUREAD()
 	case 0x1f801814:
-		return gpu.ReadStatus()
+		return gpu.GPUSTATUS()
 	}
 
 	return 0
 }
 
+/* Nice summary here: https://psx-spx.consoledev.net/graphicsprocessingunitgpu/#gpu-command-summary */
 func (gpu *GPU) WriteGP0(data uint32) {
-	op := data >> 24 // the most significant byte is opcode
+	fmt.Printf("[GPU::WriteGP0] Processing command: %x\n", data)
+
+	if gpu.fifo.active {
+		gpu.fifo.Push(data)
+
+		if gpu.fifo.done {
+			gpu.DrawShape()
+		}
+
+		return
+	}
+
+	op := GetValue(data, 29, 3) // top 3 bits of a command
 
 	switch op {
-	case 0x00:
-		// NOP
-	case 0xe1:
-		gpu.GP0DrawModeSet(data)
-	case 0xe2:
-		gpu.GP0TextureWindowSetup(data)
-	case 0xe3:
-		gpu.GP0DrawingAreaTopLeftSet(data)
-	case 0xe4:
-		gpu.GP0DrawingAreaBottomRightSet(data)
-	case 0xe5:
-		gpu.GP0DrawingOffsetSet(data)
-	case 0xe6:
-		gpu.GP0MaskBitSetup(data)
+	case 0b000:
+		gpu.ExecuteMiscCommand(data)
+	case 0b001:
+		gpu.ExecuteRenderPolygonCommand(data)
+	case 0b111:
+		gpu.ExecuteEnvironmentCommand(data)
 	default:
-		panic(fmt.Sprintf("[GPU::WriteGP0] Unknown command: %x\n", data))
+		panic(fmt.Sprintf("[GPU::WriteGP0] Unknown command: %x", data))
 	}
 }
 
 func (gpu *GPU) WriteGP1(data uint32) {
-	op := data >> 24
+	op := data >> 24 // the most significant byte determines what command
 
 	switch op {
 	case 0x00:
@@ -268,7 +277,7 @@ func (gpu *GPU) WriteGP1(data uint32) {
 	case 0x08:
 		gpu.GP1DisplayModeSet(data)
 	default:
-		panic(fmt.Sprintf("[GPU::WriteGP1] Unknown command: %x\n", data))
+		panic(fmt.Sprintf("[GPU::WriteGP1] Unknown command: %x", data))
 	}
 }
 
@@ -278,5 +287,78 @@ func (gpu *GPU) Write32(address uint32, data uint32) {
 		gpu.WriteGP0(data)
 	case 0x1f801814:
 		gpu.WriteGP1(data)
+	}
+}
+
+func (gpu *GPU) ExecuteMiscCommand(cmd uint32) {
+	op := (cmd >> 24) & 0xf
+
+	switch op {
+	case 0x0:
+		// NOP
+	case 0x1:
+		// TODO clear texture cache
+	default:
+		panic(fmt.Sprintf("[GPU::ExecuteMiscCommand] Unknown command: %x", cmd))
+	}
+}
+
+/*
+Format for polygon command:
+
+	bit number   value   meaning
+	 31-29        001    polygon render
+	   28         1/0    gouraud / flat shading
+	   27         1/0    4 / 3 vertices
+	   26         1/0    textured / untextured
+	   25         1/0    semi transparent / solid
+	   24         1/0    texture blending
+	  23-0        rgb    first color value.
+*/
+func (gpu *GPU) ExecuteRenderPolygonCommand(cmd uint32) {
+	attr := uint8(GetValue(cmd, 24, 5))
+	narg := 3 // polygons are triangles by default
+
+	if TestBit(cmd, 27) {
+		// well, it's quad then
+		narg += 1
+	}
+
+	if TestBit(cmd, 26) {
+		// If doing textured rendering, each vertex sent will also have a U/V texture coordinate attached to it, as well as a CLUT index.
+		narg += narg
+	}
+
+	if TestBit(cmd, 28) {
+		// If doing gouraud shading, there will be one more color per vertex sent, and the initial color will be the one for vertex 0.
+		narg += narg - 1
+	}
+
+	narg += 1
+
+	gpu.fifo.Init(SHAPE_POLYGON, attr, narg)
+	gpu.fifo.Push(cmd) // the initial command can be treated as the first argument
+
+	fmt.Printf("[GPU::ExecuteRenderPolygonCommand] nargs=%d\n", narg)
+}
+
+func (gpu *GPU) ExecuteEnvironmentCommand(cmd uint32) {
+	op := (cmd >> 24) & 0xf
+
+	switch op {
+	case 0x1:
+		gpu.GP0DrawModeSet(cmd)
+	case 0x2:
+		gpu.GP0TextureWindowSetup(cmd)
+	case 0x3:
+		gpu.GP0DrawingAreaTopLeftSet(cmd)
+	case 0x4:
+		gpu.GP0DrawingAreaBottomRightSet(cmd)
+	case 0x5:
+		gpu.GP0DrawingOffsetSet(cmd)
+	case 0x6:
+		gpu.GP0MaskBitSetup(cmd)
+	default:
+		panic(fmt.Sprintf("[GPU::ExecuteEnvironmentCommand] Unknown command: %x", cmd))
 	}
 }
