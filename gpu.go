@@ -119,6 +119,8 @@ type GPU struct {
 	displayVertY1 uint32 /* 0-9   Y1 (NTSC=88h-(240/2), (PAL=A3h-(288/2))  ;\scanline numbers on screen, */
 	displayVertY2 uint32 /* 10-19 Y2 (NTSC=88h+(240/2), (PAL=A3h+(288/2))  ;/relative to VSYNC */
 
+	vram *VRAM
+
 	mode int
 	fifo *FIFO
 
@@ -127,6 +129,12 @@ type GPU struct {
 	shape_attr uint8 /* rendering attributes */
 
 	/* for cpu to vram blit */
+	destX     uint32 /* destination x (ie. starting position on vram in this context) */
+	destY     uint32 /* destination y */
+	imgWidth  uint32 /* width of "image" */
+	imgHeight uint32 /* height of "image" */
+	imgX      uint32 /* x coordinate relative to "image" being transferred */
+	imgY      uint32 /* y coordinate relative to "image" being transferred */
 	wordsLeft uint32
 }
 
@@ -178,8 +186,15 @@ func NewGPU(core *GoStationCore) *GPU {
 		0,
 		0,
 		0,
+		NewVRAM(),
 		MODE_NORMAL,
 		NewFIFO(),
+		0,
+		0,
+		0,
+		0,
+		0,
+		0,
 		0,
 		0,
 		0,
@@ -273,7 +288,11 @@ func (gpu *GPU) WriteGP0(data uint32) {
 	}
 
 	if gpu.mode == MODE_CPUtoVRamBlit {
-		// TODO actually write to vram
+		lo := uint16(data & 0xffff)
+		hi := uint16(data >> 16)
+
+		gpu.DoCPUToVramTransfer(lo)
+		gpu.DoCPUToVramTransfer(hi)
 
 		gpu.wordsLeft -= 1
 
@@ -409,7 +428,24 @@ func (gpu *GPU) InitCPUToVRamBlit(cmd uint32) {
 }
 
 /*
-Opposite of the above function
+Actual cpu to vram transfer. It transfers data from cpu into a specified rectangular area in vram
+*/
+func (gpu *GPU) DoCPUToVramTransfer(data uint16) {
+	vramX := gpu.destX + gpu.imgX
+	vramY := gpu.destY + gpu.imgY
+
+	gpu.vram.Write16(vramX, vramY, data)
+
+	gpu.imgX += 1
+
+	if gpu.imgX == gpu.imgWidth {
+		gpu.imgX = 0
+		gpu.imgY += 1
+	}
+}
+
+/*
+Opposite of GPU::InitCPUToVRamBlit
 
 1st  Command                       ;\
 2nd  Source Coord      (YyyyXxxxh) ; write to GP0 port (as usually)

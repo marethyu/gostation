@@ -129,31 +129,35 @@ func (gpu *GPU) GP0DrawShape() {
 
 func (gpu *GPU) GP0DoTransferToVRAM() {
 	// 2nd  Destination Coord (YyyyXxxxh)  ;Xpos counted in halfwords
+	gpu.destX = gpu.fifo.buffer[1] & 0xffff
+	gpu.destY = gpu.fifo.buffer[1] >> 16
+
 	// 3rd  Width+Height      (YsizXsizh)  ;Xsiz counted in halfwords
 	resolution := gpu.fifo.buffer[2]
-	width := resolution & 0xffff
-	height := resolution >> 16
-	size := width * height
+	gpu.imgWidth = resolution & 0xffff
+	gpu.imgHeight = resolution >> 16
+	size := gpu.imgWidth * gpu.imgHeight
 
 	if size%2 == 1 {
 		// must be even otherwise round up with 16 bit padding since cpu transfer 32 bit data
 		size += 1
 	}
 
-	fmt.Printf("[GPU::GP0DoTransferToVRAM] width=%d,height=%d,size=%d\n", width, height, size)
+	fmt.Printf("[GPU::GP0DoTransferToVRAM] width=%d,height=%d,size=%d\n", gpu.imgWidth, gpu.imgHeight, size)
 
-	// each pixel is 16 bit in size and each word is 32 bit in size so divide by 2
+	// each pixel in vram is 16 bit in size and each word is 32 bit in size so divide by 2
 	gpu.wordsLeft = size / 2
 
-	// TODO
+	gpu.imgX = 0
+	gpu.imgY = 0
 
 	gpu.fifo.Done()
 	gpu.mode = MODE_CPUtoVRamBlit
 }
 
 func (gpu *GPU) GP0DoTransferFromVRAM() {
-	// 2nd  Destination Coord (YyyyXxxxh)  ;Xpos counted in halfwords
-	// 3rd  Width+Height      (YsizXsizh)  ;Xsiz counted in halfwords
+	// 2nd  Source Coord      (YyyyXxxxh) ; write to GP0 port (as usually)
+	// 3rd  Width+Height      (YsizXsizh) ;/
 	resolution := gpu.fifo.buffer[2]
 	width := resolution & 0xffff
 	height := resolution >> 16
