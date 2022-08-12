@@ -106,7 +106,7 @@ func (dma *DMA) DoDMATransfer(port int) {
 
 				switch port {
 				case DMA2_GPU:
-					fmt.Printf("[DMA::DoDMATransfer] GPU data: %x\n", data)
+					dma.Core.GPU.WriteGP0(data)
 				default:
 					panic(fmt.Sprintf("[DMA::DoDMATransfer] unsupported port (%d) during ram to device block copy", port))
 				}

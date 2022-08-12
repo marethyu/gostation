@@ -30,6 +30,12 @@ const (
 	DMA_DIR_GPUREADtoCPU
 )
 
+const (
+	MODE_NORMAL = iota
+	MODE_RENDERING
+	MODE_CPUtoVRamBlit
+)
+
 /* whut the forking fock why itz long */
 type GPU struct {
 	Core *GoStationCore
@@ -112,7 +118,15 @@ type GPU struct {
 	displayVertY1 uint32 /* 0-9   Y1 (NTSC=88h-(240/2), (PAL=A3h-(288/2))  ;\scanline numbers on screen, */
 	displayVertY2 uint32 /* 10-19 Y2 (NTSC=88h+(240/2), (PAL=A3h+(288/2))  ;/relative to VSYNC */
 
+	mode int
 	fifo *FIFO
+
+	/* for rendering commands */
+	shape      int   /* what shape to render when FIFO finished collecting all args */
+	shape_attr uint8 /* rendering attributes */
+
+	/* for cpu to vram blit */
+	wordsLeft uint32
 }
 
 func NewGPU(core *GoStationCore) *GPU {
@@ -163,7 +177,11 @@ func NewGPU(core *GoStationCore) *GPU {
 		0,
 		0,
 		0,
+		MODE_NORMAL,
 		NewFIFO(),
+		0,
+		0,
+		0,
 	}
 }
 
@@ -240,7 +258,27 @@ func (gpu *GPU) WriteGP0(data uint32) {
 		gpu.fifo.Push(data)
 
 		if gpu.fifo.done {
-			gpu.DrawShape()
+			switch gpu.mode {
+			case MODE_RENDERING:
+				gpu.GP0DrawShape()
+			case MODE_CPUtoVRamBlit:
+				gpu.GP0DoTransferToVRAM()
+			case MODE_NORMAL:
+				panic("[GPU::WriteGP0] normal mode???")
+			}
+		}
+
+		return
+	}
+
+	if gpu.mode == MODE_CPUtoVRamBlit {
+		// TODO actually write to vram
+
+		gpu.wordsLeft -= 1
+
+		if gpu.wordsLeft == 0 {
+			fmt.Printf("[GPU::WriteGP0] cpu to vram blit done\n")
+			gpu.mode = MODE_NORMAL
 		}
 
 		return
@@ -252,7 +290,9 @@ func (gpu *GPU) WriteGP0(data uint32) {
 	case 0b000:
 		gpu.ExecuteMiscCommand(data)
 	case 0b001:
-		gpu.ExecuteRenderPolygonCommand(data)
+		gpu.InitRenderPolygonCommand(data)
+	case 0b101:
+		gpu.InitCPUToVRamBlit(data)
 	case 0b111:
 		gpu.ExecuteEnvironmentCommand(data)
 	default:
@@ -266,6 +306,8 @@ func (gpu *GPU) WriteGP1(data uint32) {
 	switch op {
 	case 0x00:
 		gpu.GP1Reset()
+	case 0x03:
+		gpu.GP1DisplayEnableSet(data)
 	case 0x04:
 		gpu.GP1DMADirectionSet(data)
 	case 0x05:
@@ -315,8 +357,10 @@ Format for polygon command:
 	   24         1/0    texture blending
 	  23-0        rgb    first color value.
 */
-func (gpu *GPU) ExecuteRenderPolygonCommand(cmd uint32) {
-	attr := uint8(GetValue(cmd, 24, 5))
+func (gpu *GPU) InitRenderPolygonCommand(cmd uint32) {
+	gpu.shape = SHAPE_POLYGON
+	gpu.shape_attr = uint8(GetValue(cmd, 24, 5))
+
 	narg := 3 // polygons are triangles by default
 
 	if TestBit(cmd, 27) {
@@ -336,10 +380,25 @@ func (gpu *GPU) ExecuteRenderPolygonCommand(cmd uint32) {
 
 	narg += 1
 
-	gpu.fifo.Init(SHAPE_POLYGON, attr, narg)
+	gpu.mode = MODE_RENDERING
+	gpu.fifo.Init(narg)
 	gpu.fifo.Push(cmd) // the initial command can be treated as the first argument
 
 	fmt.Printf("[GPU::ExecuteRenderPolygonCommand] nargs=%d\n", narg)
+}
+
+/*
+For transferring data (like texture or palettes) from cpu to gpu's vram
+
+1st  Command
+2nd  Destination Coord (YyyyXxxxh)  ;Xpos counted in halfwords
+3rd  Width+Height      (YsizXsizh)  ;Xsiz counted in halfwords
+...  Data              (...)      <--- usually transferred via DMA
+*/
+func (gpu *GPU) InitCPUToVRamBlit(cmd uint32) {
+	gpu.mode = MODE_CPUtoVRamBlit
+	gpu.fifo.Init(3)
+	gpu.fifo.Push(cmd)
 }
 
 func (gpu *GPU) ExecuteEnvironmentCommand(cmd uint32) {
