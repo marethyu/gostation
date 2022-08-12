@@ -185,9 +185,9 @@ GP0(E1h..E6h) ;rendering attributes (0)
 */
 func (gpu *GPU) GP1Reset() {
 	// GP1(01h)      ;clear fifo
-	// TODO
+	gpu.GP1ResetCommandBuffer()
 	// GP1(02h)      ;ack irq (0)
-	gpu.irq = false
+	gpu.GP1AcknowledgeInterrupt()
 	// GP1(03h)      ;display off (1)
 	gpu.GP1DisplayEnableSet(1)
 	// GP1(04h)      ;dma off (0)
