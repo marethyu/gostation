@@ -74,7 +74,7 @@ func (dma *DMA) DoDMATransfer(port int) {
 				addr = (addr + 4) & mask
 				command := dma.Core.Bus.Ram.Read32(addr)
 
-				fmt.Printf("[DMA::DoDMATransfer] GPU command: %x\n", command)
+				dma.Core.GPU.WriteGP0(command)
 
 				size -= 1
 			}

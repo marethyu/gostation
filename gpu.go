@@ -97,8 +97,8 @@ type GPU struct {
 	drawingAreaY2 uint32
 
 	/* GP0(E5h) - Set Drawing Offset (X,Y) */
-	drawingXOffset uint32 /* 0-10   X-offset (-1024..+1023) (usually within X1,X2 of Drawing Area) */
-	drawingYOffset uint32 /* 11-21  Y-offset (-1024..+1023) (usually within Y1,Y2 of Drawing Area) */
+	drawingXOffset int32 /* 0-10   X-offset (-1024..+1023) (usually within X1,X2 of Drawing Area) */
+	drawingYOffset int32 /* 11-21  Y-offset (-1024..+1023) (usually within Y1,Y2 of Drawing Area) */
 
 	/* GP1(05h) - Start of Display area (in VRAM) */
 	displayVramStartX uint32 /* 0-9   X (0-1023)    (halfword address in VRAM)  (relative to begin of VRAM) */
@@ -236,6 +236,16 @@ func (gpu *GPU) WriteGP0(data uint32) {
 		// NOP
 	case 0xe1:
 		gpu.GP0DrawModeSet(data)
+	case 0xe2:
+		gpu.GP0TextureWindowSetup(data)
+	case 0xe3:
+		gpu.GP0DrawingAreaTopLeftSet(data)
+	case 0xe4:
+		gpu.GP0DrawingAreaBottomRightSet(data)
+	case 0xe5:
+		gpu.GP0DrawingOffsetSet(data)
+	case 0xe6:
+		gpu.GP0MaskBitSetup(data)
 	default:
 		panic(fmt.Sprintf("[GPU::WriteGP0] Unknown command: %x\n", data))
 	}
@@ -247,6 +257,16 @@ func (gpu *GPU) WriteGP1(data uint32) {
 	switch op {
 	case 0x00:
 		gpu.GP1Reset()
+	case 0x04:
+		gpu.GP1DMADirectionSet(data)
+	case 0x05:
+		gpu.GP1DisplayVRamStartSet(data)
+	case 0x06:
+		gpu.GP1HorizDisplayRangeSet(data)
+	case 0x07:
+		gpu.GP1VertDisplayRangeSet(data)
+	case 0x08:
+		gpu.GP1DisplayModeSet(data)
 	default:
 		panic(fmt.Sprintf("[GPU::WriteGP1] Unknown command: %x\n", data))
 	}
