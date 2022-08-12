@@ -34,6 +34,7 @@ const (
 	MODE_NORMAL = iota
 	MODE_RENDERING
 	MODE_CPUtoVRamBlit
+	MODE_VramtoCPUBlit
 )
 
 /* whut the forking fock why itz long */
@@ -252,8 +253,6 @@ func (gpu *GPU) Read32(address uint32) uint32 {
 
 /* Nice summary here: https://psx-spx.consoledev.net/graphicsprocessingunitgpu/#gpu-command-summary */
 func (gpu *GPU) WriteGP0(data uint32) {
-	fmt.Printf("[GPU::WriteGP0] Processing command: %x\n", data)
-
 	if gpu.fifo.active {
 		gpu.fifo.Push(data)
 
@@ -263,6 +262,8 @@ func (gpu *GPU) WriteGP0(data uint32) {
 				gpu.GP0DrawShape()
 			case MODE_CPUtoVRamBlit:
 				gpu.GP0DoTransferToVRAM()
+			case MODE_VramtoCPUBlit:
+				gpu.GP0DoTransferFromVRAM()
 			case MODE_NORMAL:
 				panic("[GPU::WriteGP0] normal mode???")
 			}
@@ -293,6 +294,8 @@ func (gpu *GPU) WriteGP0(data uint32) {
 		gpu.InitRenderPolygonCommand(data)
 	case 0b101:
 		gpu.InitCPUToVRamBlit(data)
+	case 0b110:
+		gpu.InitVramToCPUBlit(data)
 	case 0b111:
 		gpu.ExecuteEnvironmentCommand(data)
 	default:
@@ -306,6 +309,10 @@ func (gpu *GPU) WriteGP1(data uint32) {
 	switch op {
 	case 0x00:
 		gpu.GP1Reset()
+	case 0x01:
+		gpu.GP1ResetCommandBuffer()
+	case 0x02:
+		gpu.GP1AcknowledgeInterrupt()
 	case 0x03:
 		gpu.GP1DisplayEnableSet(data)
 	case 0x04:
@@ -397,6 +404,20 @@ For transferring data (like texture or palettes) from cpu to gpu's vram
 */
 func (gpu *GPU) InitCPUToVRamBlit(cmd uint32) {
 	gpu.mode = MODE_CPUtoVRamBlit
+	gpu.fifo.Init(3)
+	gpu.fifo.Push(cmd)
+}
+
+/*
+Opposite of the above function
+
+1st  Command                       ;\
+2nd  Source Coord      (YyyyXxxxh) ; write to GP0 port (as usually)
+3rd  Width+Height      (YsizXsizh) ;/
+...  Data              (...)       ;<--- read from GPUREAD port (or via DMA)
+*/
+func (gpu *GPU) InitVramToCPUBlit(cmd uint32) {
+	gpu.mode = MODE_VramtoCPUBlit
 	gpu.fifo.Init(3)
 	gpu.fifo.Push(cmd)
 }

@@ -151,6 +151,21 @@ func (gpu *GPU) GP0DoTransferToVRAM() {
 	gpu.mode = MODE_CPUtoVRamBlit
 }
 
+func (gpu *GPU) GP0DoTransferFromVRAM() {
+	// 2nd  Destination Coord (YyyyXxxxh)  ;Xpos counted in halfwords
+	// 3rd  Width+Height      (YsizXsizh)  ;Xsiz counted in halfwords
+	resolution := gpu.fifo.buffer[2]
+	width := resolution & 0xffff
+	height := resolution >> 16
+
+	fmt.Printf("[GPU::GP0DoTransferFromVRAM] width=%d,height=%d\n", width, height)
+
+	// TODO
+
+	gpu.fifo.Done()
+	gpu.mode = MODE_NORMAL
+}
+
 /*
 GP1 commands here
 */
@@ -200,6 +215,26 @@ func (gpu *GPU) GP1Reset() {
 	gpu.GP0DrawingOffsetSet(0)
 	// GP0(E6h)
 	gpu.GP0MaskBitSetup(0)
+}
+
+/*
+	https://psx-spx.consoledev.net/graphicsprocessingunitgpu/#gp101h-reset-command-buffer
+
+0-23  Not used (zero)
+*/
+func (gpu *GPU) GP1ResetCommandBuffer() {
+	gpu.fifo.Reset()
+	gpu.mode = MODE_NORMAL
+	// TODO clut cache
+}
+
+/*
+	https://psx-spx.consoledev.net/graphicsprocessingunitgpu/#gp102h-acknowledge-gpu-interrupt-irq1
+
+0-23  Not used (zero)                                        ;GPUSTAT.24
+*/
+func (gpu *GPU) GP1AcknowledgeInterrupt() {
+	gpu.irq = false // reset
 }
 
 /*

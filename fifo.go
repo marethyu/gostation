@@ -26,6 +26,13 @@ func (fifo *FIFO) Init(nArgs int) {
 	fifo.idx = 0
 }
 
+func (fifo *FIFO) Reset() {
+	fifo.active = false
+	fifo.done = false
+	fifo.nArgs = 0
+	fifo.idx = 0
+}
+
 func (fifo *FIFO) Push(arg uint32) {
 	fifo.buffer[fifo.idx] = arg
 	fifo.idx++
