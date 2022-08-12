@@ -129,8 +129,8 @@ type GPU struct {
 	shape_attr uint8 /* rendering attributes */
 
 	/* for cpu to vram blit */
-	destX     uint32 /* destination x (ie. starting position on vram in this context) */
-	destY     uint32 /* destination y */
+	startX    uint32 /* destination x (ie. starting position on vram in this context) */
+	startY    uint32 /* destination y */
 	imgWidth  uint32 /* width of "image" */
 	imgHeight uint32 /* height of "image" */
 	imgX      uint32 /* x coordinate relative to "image" being transferred */
@@ -251,7 +251,20 @@ func (gpu *GPU) GPUSTATUS() uint32 {
 }
 
 func (gpu *GPU) GPUREAD() uint32 {
-	// TODO
+	if gpu.mode == MODE_VramtoCPUBlit {
+		lo := uint32(gpu.DoVramToCPUTransfer())
+		hi := uint32(gpu.DoVramToCPUTransfer())
+
+		gpu.wordsLeft -= 1
+
+		if gpu.wordsLeft == 0 {
+			fmt.Printf("[GPU::GPUREAD] vram to cpu blit done\n")
+			gpu.mode = MODE_NORMAL
+		}
+
+		return (hi << 16) | lo
+	}
+
 	return 0
 }
 
@@ -431,8 +444,8 @@ func (gpu *GPU) InitCPUToVRamBlit(cmd uint32) {
 Actual cpu to vram transfer. It transfers data from cpu into a specified rectangular area in vram
 */
 func (gpu *GPU) DoCPUToVramTransfer(data uint16) {
-	vramX := gpu.destX + gpu.imgX
-	vramY := gpu.destY + gpu.imgY
+	vramX := gpu.startX + gpu.imgX
+	vramY := gpu.startY + gpu.imgY
 
 	gpu.vram.Write16(vramX, vramY, data)
 
@@ -456,6 +469,22 @@ func (gpu *GPU) InitVramToCPUBlit(cmd uint32) {
 	gpu.mode = MODE_VramtoCPUBlit
 	gpu.fifo.Init(3)
 	gpu.fifo.Push(cmd)
+}
+
+func (gpu *GPU) DoVramToCPUTransfer() uint16 {
+	vramX := gpu.startX + gpu.imgX
+	vramY := gpu.startY + gpu.imgY
+
+	data := gpu.vram.Read16(vramX, vramY)
+
+	gpu.imgX += 1
+
+	if gpu.imgX == gpu.imgWidth {
+		gpu.imgX = 0
+		gpu.imgY += 1
+	}
+
+	return data
 }
 
 func (gpu *GPU) ExecuteEnvironmentCommand(cmd uint32) {
