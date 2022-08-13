@@ -24,7 +24,7 @@ func (gpu *GPU) DoRenderPolygon() {
 	case 0b01100:
 		// TODO
 	case 0b10000:
-		gpu.RenderTrigGouraud() // TODO something wrong here
+		gpu.RenderTrigGouraud()
 	case 0b01000:
 		gpu.RenderMonochromeQuad()
 	case 0b11000:
@@ -41,7 +41,10 @@ func (gpu *GPU) RenderTrigGouraud() {
 
 	// TODO ignore rightmost and bottom edges
 
-	fmt.Printf("[GPU::RenderTrigGouraud] x1=%d,y1=%d,x2=%d,y2=%d,x3=%d,y3=%d,r=%d,g=%d,b=%d\n", v1.x, v1.y, v2.x, v2.y, v3.x, v3.y, v1.r, v1.g, v1.b)
+	fmt.Printf("[GPU::RenderTrigGouraud] x1=%d,y1=%d,x2=%d,y2=%d,x3=%d,y3=%d\n", v1.x, v1.y, v2.x, v2.y, v3.x, v3.y)
+	fmt.Printf("[GPU::RenderTrigGouraud] vert%d: r=%d,g=%d,b=%d\n", 1, v1.r, v1.g, v1.b)
+	fmt.Printf("[GPU::RenderTrigGouraud] vert%d: r=%d,g=%d,b=%d\n", 2, v2.r, v2.g, v2.b)
+	fmt.Printf("[GPU::RenderTrigGouraud] vert%d: r=%d,g=%d,b=%d\n", 3, v3.r, v3.g, v3.b)
 
 	// make sure that vertexes are in clockwise order
 	gpu.ShadedTriangle(v1, v2, v3)
@@ -80,7 +83,11 @@ func (gpu *GPU) RenderQuadGouraud() {
 	v3.y -= 1
 	v4.y -= 1
 
-	fmt.Printf("[GPU::RenderQuadGouraud] x1=%d,y1=%d,x2=%d,y2=%d,x3=%d,y3=%d,x4=%d,y4=%d,r=%d,g=%d,b=%d\n", v1.x, v1.y, v2.x, v2.y, v3.x, v3.y, v4.x, v4.y, v1.r, v1.g, v1.b)
+	fmt.Printf("[GPU::RenderQuadGouraud] x1=%d,y1=%d,x2=%d,y2=%d,x3=%d,y3=%d,x4=%d,y4=%d\n", v1.x, v1.y, v2.x, v2.y, v3.x, v3.y, v4.x, v4.y)
+	fmt.Printf("[GPU::RenderQuadGouraud] vert%d: r=%d,g=%d,b=%d\n", 1, v1.r, v1.g, v1.b)
+	fmt.Printf("[GPU::RenderQuadGouraud] vert%d: r=%d,g=%d,b=%d\n", 2, v2.r, v2.g, v2.b)
+	fmt.Printf("[GPU::RenderQuadGouraud] vert%d: r=%d,g=%d,b=%d\n", 3, v3.r, v3.g, v3.b)
+	fmt.Printf("[GPU::RenderQuadGouraud] vert%d: r=%d,g=%d,b=%d\n", 4, v3.r, v3.g, v3.b)
 
 	// make sure that vertexes are in clockwise order
 	gpu.ShadedTriangle(v1, v2, v3)
@@ -108,9 +115,9 @@ func (gpu *GPU) ShadedTriangle(v1, v2, v3 *Vertex) {
 			w3 := float32(int32(x-v1.x)*int32(v2.y-v1.y)-int32(y-v1.y)*int32(v2.x-v1.x)) / area
 
 			if (w1 >= 0.0) && (w2 >= 0.0) && (w3 >= 0.0) {
-				r := uint8(w1*float32(v1.r) + w2*float32(v1.r) + w3*float32(v1.r))
-				g := uint8(w1*float32(v1.g) + w2*float32(v1.g) + w3*float32(v1.g))
-				b := uint8(w1*float32(v1.b) + w2*float32(v1.b) + w3*float32(v1.b))
+				r := uint8(w1*float32(v1.r) + w2*float32(v2.r) + w3*float32(v3.r))
+				g := uint8(w1*float32(v1.g) + w2*float32(v2.g) + w3*float32(v3.g))
+				b := uint8(w1*float32(v1.b) + w2*float32(v2.b) + w3*float32(v3.b))
 
 				gpu.Pixel(uint32(x), uint32(y), r, g, b)
 			}
