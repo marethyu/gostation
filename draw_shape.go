@@ -21,11 +21,30 @@ works with 3 point polygons.
 */
 func (gpu *GPU) DoRenderPolygon() {
 	switch gpu.shape_attr {
+	case 0b01100:
+		// TODO
+	case 0b10000:
+		gpu.RenderTrigGouraud() // TODO something wrong here
 	case 0b01000:
 		gpu.RenderMonochromeQuad()
+	case 0b11000:
+		gpu.RenderQuadGouraud()
 	default:
 		panic(fmt.Sprintf("[GPU::DoRenderPolygon] Unknown attribute: %05b\n", gpu.shape_attr))
 	}
+}
+
+func (gpu *GPU) RenderTrigGouraud() {
+	v1 := NewVertex(gpu.fifo.buffer[1], gpu.fifo.buffer[0])
+	v2 := NewVertex(gpu.fifo.buffer[3], gpu.fifo.buffer[2])
+	v3 := NewVertex(gpu.fifo.buffer[5], gpu.fifo.buffer[4])
+
+	// TODO ignore rightmost and bottom edges
+
+	fmt.Printf("[GPU::RenderTrigGouraud] x1=%d,y1=%d,x2=%d,y2=%d,x3=%d,y3=%d,r=%d,g=%d,b=%d\n", v1.x, v1.y, v2.x, v2.y, v3.x, v3.y, v1.r, v1.g, v1.b)
+
+	// make sure that vertexes are in clockwise order
+	gpu.ShadedTriangle(v1, v2, v3)
 }
 
 func (gpu *GPU) RenderMonochromeQuad() {
@@ -43,6 +62,25 @@ func (gpu *GPU) RenderMonochromeQuad() {
 	v4.y -= 1
 
 	fmt.Printf("[GPU::RenderMonochromeQuad] x1=%d,y1=%d,x2=%d,y2=%d,x3=%d,y3=%d,x4=%d,y4=%d,r=%d,g=%d,b=%d\n", v1.x, v1.y, v2.x, v2.y, v3.x, v3.y, v4.x, v4.y, v1.r, v1.g, v1.b)
+
+	// make sure that vertexes are in clockwise order
+	gpu.ShadedTriangle(v1, v2, v3)
+	gpu.ShadedTriangle(v2, v4, v3)
+}
+
+func (gpu *GPU) RenderQuadGouraud() {
+	v1 := NewVertex(gpu.fifo.buffer[1], gpu.fifo.buffer[0])
+	v2 := NewVertex(gpu.fifo.buffer[3], gpu.fifo.buffer[2])
+	v3 := NewVertex(gpu.fifo.buffer[5], gpu.fifo.buffer[4])
+	v4 := NewVertex(gpu.fifo.buffer[7], gpu.fifo.buffer[6])
+
+	// ignore rightmost and bottom edges
+	v2.x -= 1
+	v4.x -= 1
+	v3.y -= 1
+	v4.y -= 1
+
+	fmt.Printf("[GPU::RenderQuadGouraud] x1=%d,y1=%d,x2=%d,y2=%d,x3=%d,y3=%d,x4=%d,y4=%d,r=%d,g=%d,b=%d\n", v1.x, v1.y, v2.x, v2.y, v3.x, v3.y, v4.x, v4.y, v1.r, v1.g, v1.b)
 
 	// make sure that vertexes are in clockwise order
 	gpu.ShadedTriangle(v1, v2, v3)
