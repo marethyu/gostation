@@ -19,10 +19,10 @@ package main
 24-31 Command  (E1h)
 */
 func (gpu *GPU) GP0DrawModeSet(data uint32) {
-	gpu.txBase = GetValue(data, 0, 4)
-	gpu.tyBase = GetValue(data, 4, 1)
-	gpu.semiTransparency = uint8(GetValue(data, 5, 2))
-	gpu.textureFormat = uint8(GetValue(data, 7, 2))
+	gpu.txBase = GetRange(data, 0, 4)
+	gpu.tyBase = GetRange(data, 4, 1)
+	gpu.semiTransparency = uint8(GetRange(data, 5, 2))
+	gpu.textureFormat = uint8(GetRange(data, 7, 2))
 	gpu.dilthering = TestBit(data, 9)
 	gpu.drawToDisplay = TestBit(data, 10)
 	gpu.textureDisable = TestBit(data, 11)
@@ -41,10 +41,10 @@ func (gpu *GPU) GP0DrawModeSet(data uint32) {
 24-31  Command  (E2h)
 */
 func (gpu *GPU) GP0TextureWindowSetup(data uint32) {
-	gpu.texWindowMaskX = GetValue(data, 0, 5)
-	gpu.texWindowMaskY = GetValue(data, 5, 5)
-	gpu.texWindowOffsetX = GetValue(data, 10, 5)
-	gpu.texWindowOffsetY = GetValue(data, 15, 5)
+	gpu.texWindowMaskX = GetRange(data, 0, 5)
+	gpu.texWindowMaskY = GetRange(data, 5, 5)
+	gpu.texWindowOffsetX = GetRange(data, 10, 5)
+	gpu.texWindowOffsetY = GetRange(data, 15, 5)
 }
 
 /*
@@ -58,8 +58,8 @@ func (gpu *GPU) GP0TextureWindowSetup(data uint32) {
 24-31  Command  (Exh)
 */
 func (gpu *GPU) GP0DrawingAreaTopLeftSet(data uint32) {
-	gpu.drawingAreaX1 = GetValue(data, 0, 10)
-	gpu.drawingAreaY1 = GetValue(data, 10, 10)
+	gpu.drawingAreaX1 = GetRange(data, 0, 10)
+	gpu.drawingAreaY1 = GetRange(data, 10, 10)
 }
 
 /*
@@ -73,8 +73,8 @@ func (gpu *GPU) GP0DrawingAreaTopLeftSet(data uint32) {
 24-31  Command  (Exh)
 */
 func (gpu *GPU) GP0DrawingAreaBottomRightSet(data uint32) {
-	gpu.drawingAreaX2 = GetValue(data, 0, 10)
-	gpu.drawingAreaY2 = GetValue(data, 10, 10)
+	gpu.drawingAreaX2 = GetRange(data, 0, 10)
+	gpu.drawingAreaY2 = GetRange(data, 10, 10)
 }
 
 /*
@@ -86,8 +86,8 @@ func (gpu *GPU) GP0DrawingAreaBottomRightSet(data uint32) {
 24-31  Command  (E5h)
 */
 func (gpu *GPU) GP0DrawingOffsetSet(data uint32) {
-	x := uint16(GetValue(data, 0, 11))
-	y := uint16(GetValue(data, 11, 11))
+	x := uint16(GetRange(data, 0, 11))
+	y := uint16(GetRange(data, 11, 11))
 
 	gpu.drawingXOffset = int32(ForceSignExtension16(x, 11))
 	gpu.drawingYOffset = int32(ForceSignExtension16(y, 11))
@@ -256,7 +256,7 @@ func (gpu *GPU) GP1DisplayEnableSet(data uint32) {
 2-23 Not used (zero)
 */
 func (gpu *GPU) GP1DMADirectionSet(data uint32) {
-	gpu.dmaDirection = uint8(GetValue(data, 0, 2))
+	gpu.dmaDirection = uint8(GetRange(data, 0, 2))
 }
 
 /*
@@ -267,8 +267,8 @@ func (gpu *GPU) GP1DMADirectionSet(data uint32) {
 19-23 Not used (zero)
 */
 func (gpu *GPU) GP1DisplayVRamStartSet(data uint32) {
-	gpu.displayVramStartX = GetValue(data, 0, 10) & 0b1111111110 // ignore the LSB to align with 16 bit pixels
-	gpu.displayVramStartY = GetValue(data, 10, 9)
+	gpu.displayVramStartX = GetRange(data, 0, 10) & 0b1111111110 // ignore the LSB to align with 16 bit pixels
+	gpu.displayVramStartY = GetRange(data, 10, 9)
 }
 
 /*
@@ -278,8 +278,8 @@ func (gpu *GPU) GP1DisplayVRamStartSet(data uint32) {
 12-23  X2 (260h+320*8)   ;12bit       ;/relative to HSYNC
 */
 func (gpu *GPU) GP1HorizDisplayRangeSet(data uint32) {
-	gpu.displayHorizX1 = GetValue(data, 0, 12)
-	gpu.displayHorizX2 = GetValue(data, 12, 12)
+	gpu.displayHorizX1 = GetRange(data, 0, 12)
+	gpu.displayHorizX2 = GetRange(data, 12, 12)
 }
 
 /*
@@ -290,8 +290,8 @@ func (gpu *GPU) GP1HorizDisplayRangeSet(data uint32) {
 20-23 Not used (zero)
 */
 func (gpu *GPU) GP1VertDisplayRangeSet(data uint32) {
-	gpu.displayVertY1 = GetValue(data, 0, 10)
-	gpu.displayVertY2 = GetValue(data, 10, 10)
+	gpu.displayVertY1 = GetRange(data, 0, 10)
+	gpu.displayVertY2 = GetRange(data, 10, 10)
 }
 
 /*
@@ -307,7 +307,7 @@ func (gpu *GPU) GP1VertDisplayRangeSet(data uint32) {
 8-23  Not used (zero)
 */
 func (gpu *GPU) GP1DisplayModeSet(data uint32) {
-	gpu.hr1 = uint8(GetValue(data, 0, 2))
+	gpu.hr1 = uint8(GetRange(data, 0, 2))
 	gpu.vertRes = TestBit(data, 2)
 	gpu.PALMode = TestBit(data, 3)
 	gpu.displayColourDepth = TestBit(data, 4)

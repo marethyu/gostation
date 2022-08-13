@@ -96,7 +96,7 @@ func (cpu *CPU) Log(logRegisters bool) {
 
 /* Refer to this page https://psx-spx.consoledev.net/cpuspecifications/#cpu-opcode-encoding for all opcodes and its encodings */
 func (cpu *CPU) ExecutePrimaryOpcode(opcode uint32) {
-	op := GetValue(opcode, 26, 6)
+	op := GetRange(opcode, 26, 6)
 
 	switch op {
 	case 0x00:
@@ -186,7 +186,7 @@ func (cpu *CPU) ExecutePrimaryOpcode(opcode uint32) {
 }
 
 func (cpu *CPU) ExecuteSecondaryOpcode(opcode uint32) {
-	op := GetValue(opcode, 0, 6)
+	op := GetRange(opcode, 0, 6)
 
 	switch op {
 	case 0x00:
@@ -252,7 +252,7 @@ func (cpu *CPU) ExecuteSecondaryOpcode(opcode uint32) {
 }
 
 func (cpu *CPU) ExecuteCOP0Opcode(opcode uint32) {
-	op := GetValue(opcode, 21, 5)
+	op := GetRange(opcode, 21, 5)
 
 	switch op {
 	case 0b00000:

@@ -149,11 +149,11 @@ func (dma *DMA) Read32(address uint32) uint32 {
 		case 0x4:
 			var dicr uint32 = 0
 
-			PackValue(&dicr, 0, uint32(dma.unknown), 6)
+			PackRange(&dicr, 0, uint32(dma.unknown), 6)
 			ModifyBit(&dicr, 15, dma.forceIrq)
-			PackValue(&dicr, 16, uint32(dma.dmaIE), 7)
+			PackRange(&dicr, 16, uint32(dma.dmaIE), 7)
 			ModifyBit(&dicr, 23, dma.dmaIME)
-			PackValue(&dicr, 24, uint32(dma.dmaIRQFlag), 7)
+			PackRange(&dicr, 24, uint32(dma.dmaIRQFlag), 7)
 			ModifyBit(&dicr, 31, dma.IRQMasterFlag())
 
 			return dicr
@@ -184,11 +184,11 @@ func (dma *DMA) Write32(address uint32, data uint32) {
 		case 0x0:
 			dma.control = data
 		case 0x4:
-			dma.unknown = uint8(GetValue(data, 0, 6))
+			dma.unknown = uint8(GetRange(data, 0, 6))
 			dma.forceIrq = TestBit(data, 15)
-			dma.dmaIE = uint8(GetValue(data, 16, 7))
+			dma.dmaIE = uint8(GetRange(data, 16, 7))
 			dma.dmaIME = TestBit(data, 23)
-			dma.dmaIRQFlag = uint8(GetValue(data, 24, 7))
+			dma.dmaIRQFlag = uint8(GetRange(data, 24, 7))
 		default:
 			panic(fmt.Sprintf("[DMA::Write32] (writing to some register) attempt to write %x to invalid address: %x", data, address))
 		}

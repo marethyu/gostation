@@ -209,10 +209,10 @@ func (gpu *GPU) Contains(address uint32) bool {
 func (gpu *GPU) GPUSTATUS() uint32 {
 	var status uint32 = 0
 
-	PackValue(&status, 0, uint32(gpu.txBase), 4)
+	PackRange(&status, 0, uint32(gpu.txBase), 4)
 	ModifyBit(&status, 4, gpu.tyBase != 0)
-	PackValue(&status, 5, uint32(gpu.semiTransparency), 2)
-	PackValue(&status, 7, uint32(gpu.textureFormat), 2)
+	PackRange(&status, 5, uint32(gpu.semiTransparency), 2)
+	PackRange(&status, 7, uint32(gpu.textureFormat), 2)
 	ModifyBit(&status, 9, gpu.dilthering)
 	ModifyBit(&status, 10, gpu.drawToDisplay)
 	ModifyBit(&status, 11, gpu.setMaskBit)
@@ -221,7 +221,7 @@ func (gpu *GPU) GPUSTATUS() uint32 {
 	ModifyBit(&status, 14, false)
 	ModifyBit(&status, 15, gpu.textureDisable)
 	ModifyBit(&status, 16, gpu.hr2)
-	PackValue(&status, 17, uint32(gpu.hr1), 2)
+	PackRange(&status, 17, uint32(gpu.hr1), 2)
 	// Fuck infinite loops
 	// ModifyBit(&status, 19, gpu.vertRes)
 	ModifyBit(&status, 20, gpu.PALMode)
@@ -244,7 +244,7 @@ func (gpu *GPU) GPUSTATUS() uint32 {
 	ModifyBit(&status, 26, true)
 	ModifyBit(&status, 27, true)
 	ModifyBit(&status, 28, true)
-	PackValue(&status, 29, uint32(gpu.dmaDirection), 2)
+	PackRange(&status, 29, uint32(gpu.dmaDirection), 2)
 	ModifyBit(&status, 31, false)
 
 	return status
@@ -315,7 +315,7 @@ func (gpu *GPU) WriteGP0(data uint32) {
 		return
 	}
 
-	op := GetValue(data, 29, 3) // top 3 bits of a command
+	op := GetRange(data, 29, 3) // top 3 bits of a command
 
 	switch op {
 	case 0b000:
@@ -396,7 +396,7 @@ Format for polygon command:
 */
 func (gpu *GPU) InitRenderPolygonCommand(cmd uint32) {
 	gpu.shape = SHAPE_POLYGON
-	gpu.shape_attr = uint8(GetValue(cmd, 24, 5))
+	gpu.shape_attr = uint8(GetRange(cmd, 24, 5))
 
 	nvert := 3 // polygons are triangles by default
 

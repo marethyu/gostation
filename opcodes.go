@@ -28,9 +28,9 @@ func (cpu *CPU) OpIllegal() {
 // bltzal rs,dest     if rs<0   then pc=$+4+(..)*4, ra=$+8
 // bgezal rs,dest     if rs>=0  then pc=$+4+(..)*4, ra=$+8
 func (cpu *CPU) OpBcondZ(opcode uint32) {
-	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
-	cond := GetValue(opcode, 16, 5)
-	rs := int(GetValue(opcode, 21, 5))
+	imm16 := SignExtendedWord(GetRange(opcode, 0, 16))
+	cond := GetRange(opcode, 16, 5)
+	rs := int(GetRange(opcode, 21, 5))
 
 	val := int32(cpu.reg(rs))
 
@@ -69,7 +69,7 @@ func (cpu *CPU) OpBcondZ(opcode uint32) {
 // 00001x | <---------immediate26bit---------> | j/jal
 // j      dest        pc=(pc and F0000000h)+(imm26bit*4)
 func (cpu *CPU) OpJump(opcode uint32) {
-	imm26 := GetValue(opcode, 0, 26)
+	imm26 := GetRange(opcode, 0, 26)
 
 	cpu.next_pc = (cpu.pc & 0xf0000000) | (imm26 << 2)
 	cpu.isBranch = true
@@ -93,9 +93,9 @@ func (cpu *CPU) OpJAL(opcode uint32) {
 // 00010x | rs   | rt   | <--immediate16bit--> | beq/bne
 // beq    rs,rt,dest  if rs=rt  then pc=$+4+(-8000h..+7FFFh)*4
 func (cpu *CPU) OpBEQ(opcode uint32) {
-	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	imm16 := SignExtendedWord(GetRange(opcode, 0, 16))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	test := cpu.reg(rs) == cpu.reg(rt)
 	if test {
@@ -110,9 +110,9 @@ func (cpu *CPU) OpBEQ(opcode uint32) {
 // 00010x | rs   | rt   | <--immediate16bit--> | beq/bne
 // bne    rs,rt,dest  if rs<>rt then pc=$+4+(-8000h..+7FFFh)*4
 func (cpu *CPU) OpBNE(opcode uint32) {
-	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	imm16 := SignExtendedWord(GetRange(opcode, 0, 16))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	test := cpu.reg(rs) != cpu.reg(rt)
 	if test {
@@ -127,8 +127,8 @@ func (cpu *CPU) OpBNE(opcode uint32) {
 // 00011x | rs   | N/A  | <--immediate16bit--> | blez/bgtz
 // blez   rs,dest     if rs<=0  then pc=$+4+(-8000h..+7FFFh)*4
 func (cpu *CPU) OpBLEZ(opcode uint32) {
-	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
-	rs := int(GetValue(opcode, 21, 5))
+	imm16 := SignExtendedWord(GetRange(opcode, 0, 16))
+	rs := int(GetRange(opcode, 21, 5))
 
 	val := int32(cpu.reg(rs))
 	test := val <= 0
@@ -144,8 +144,8 @@ func (cpu *CPU) OpBLEZ(opcode uint32) {
 // 00011x | rs   | N/A  | <--immediate16bit--> | blez/bgtz
 // bgtz   rs,dest     if rs>0   then pc=$+4+(-8000h..+7FFFh)*4
 func (cpu *CPU) OpBGTZ(opcode uint32) {
-	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
-	rs := int(GetValue(opcode, 21, 5))
+	imm16 := SignExtendedWord(GetRange(opcode, 0, 16))
+	rs := int(GetRange(opcode, 21, 5))
 
 	val := int32(cpu.reg(rs))
 	test := val > 0
@@ -161,9 +161,9 @@ func (cpu *CPU) OpBGTZ(opcode uint32) {
 // 001xxx | rs   | rt   | <--immediate16bit--> | alu-imm
 // addi  rt,rs,imm        rt=rs+(-8000h..+7FFFh) (with ov.trap)
 func (cpu *CPU) OpADDI(opcode uint32) {
-	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	imm16 := SignExtendedWord(GetRange(opcode, 0, 16))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	a := int32(imm16)
 	b := int32(cpu.reg(rs))
@@ -185,9 +185,9 @@ func (cpu *CPU) OpADDI(opcode uint32) {
 // 001xxx | rs   | rt   | <--immediate16bit--> | alu-imm
 // addiu rt,rs,imm        rt=rs+(-8000h..+7FFFh)
 func (cpu *CPU) OpADDIU(opcode uint32) {
-	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	imm16 := SignExtendedWord(GetRange(opcode, 0, 16))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	val := cpu.reg(rs) + imm16
 	cpu.modifyReg(rt, val)
@@ -200,9 +200,9 @@ func (cpu *CPU) OpADDIU(opcode uint32) {
 // 001xxx | rs   | rt   | <--immediate16bit--> | alu-imm
 // setlt slti  rt,rs,imm if rs<(-8000h..+7FFFh)  then rt=1 else rt=0 (signed)
 func (cpu *CPU) OpSLTI(opcode uint32) {
-	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	imm16 := SignExtendedWord(GetRange(opcode, 0, 16))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	val := int32(cpu.reg(rs))
 	test := val < int32(imm16)
@@ -220,9 +220,9 @@ func (cpu *CPU) OpSLTI(opcode uint32) {
 // 001xxx | rs   | rt   | <--immediate16bit--> | alu-imm
 // setb  sltiu rt,rs,imm if rs<(FFFF8000h..7FFFh) then rt=1 else rt=0(unsigned)
 func (cpu *CPU) OpSLTIU(opcode uint32) {
-	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	imm16 := SignExtendedWord(GetRange(opcode, 0, 16))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	val := cpu.reg(rs)
 	test := val < imm16
@@ -240,9 +240,9 @@ func (cpu *CPU) OpSLTIU(opcode uint32) {
 // 001xxx | rs   | rt   | <--immediate16bit--> | alu-imm
 // andi rt,rs,imm        rt = rs AND (0000h..FFFFh)
 func (cpu *CPU) OpANDI(opcode uint32) {
-	imm16 := GetValue(opcode, 0, 16)
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5)) /* the low 16 bits of rt which is assumed to be zero will be filled with imm16 */
+	imm16 := GetRange(opcode, 0, 16)
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5)) /* the low 16 bits of rt which is assumed to be zero will be filled with imm16 */
 
 	val := cpu.reg(rs) & imm16
 	cpu.modifyReg(rt, val)
@@ -255,9 +255,9 @@ func (cpu *CPU) OpANDI(opcode uint32) {
 // 001xxx | rs   | rt   | <--immediate16bit--> | alu-imm
 // ori  rt,rs,imm        rt = rs OR  (0000h..FFFFh)
 func (cpu *CPU) OpORI(opcode uint32) {
-	imm16 := GetValue(opcode, 0, 16)
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5)) /* the low 16 bits of rt which is assumed to be zero will be filled with imm16 */
+	imm16 := GetRange(opcode, 0, 16)
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5)) /* the low 16 bits of rt which is assumed to be zero will be filled with imm16 */
 
 	val := cpu.reg(rs) | imm16
 	cpu.modifyReg(rt, val)
@@ -270,9 +270,9 @@ func (cpu *CPU) OpORI(opcode uint32) {
 // 001xxx | rs   | rt   | <--immediate16bit--> | alu-imm
 // xori rt,rs,imm        rt = rs XOR (0000h..FFFFh)
 func (cpu *CPU) OpXORI(opcode uint32) {
-	imm16 := GetValue(opcode, 0, 16)
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	imm16 := GetRange(opcode, 0, 16)
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	val := cpu.reg(rs) ^ imm16
 	cpu.modifyReg(rt, val)
@@ -285,8 +285,8 @@ func (cpu *CPU) OpXORI(opcode uint32) {
 // 001111 | N/A  | rt   | <--immediate16bit--> | lui-imm
 // lui  rt,imm            rt = (0000h..FFFFh) SHL 16
 func (cpu *CPU) OpLUI(opcode uint32) {
-	imm16 := GetValue(opcode, 0, 16) /* this value will be placed in the high 16 bits of a 32 bit value */
-	rt := int(GetValue(opcode, 16, 5))
+	imm16 := GetRange(opcode, 0, 16) /* this value will be placed in the high 16 bits of a 32 bit value */
+	rt := int(GetRange(opcode, 16, 5))
 
 	val := imm16 << 16 /* the low 16 bits of a 32 bit value is set to zero */
 	cpu.modifyReg(rt, val)
@@ -299,9 +299,9 @@ func (cpu *CPU) OpLUI(opcode uint32) {
 // 100xxx | rs   | rt   | <--immediate16bit--> | load rt,[rs+imm]
 // lb  rt,imm(rs)    rt=[imm+rs]  ;byte sign-extended
 func (cpu *CPU) OpLoadByte(opcode uint32) {
-	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	imm16 := SignExtendedWord(GetRange(opcode, 0, 16))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	addr := cpu.reg(rs) + imm16
 	val := SignExtendedByte(cpu.Core.Bus.Read8(addr))
@@ -316,9 +316,9 @@ func (cpu *CPU) OpLoadByte(opcode uint32) {
 // 100xxx | rs   | rt   | <--immediate16bit--> | load rt,[rs+imm]
 // lh  rt,imm(rs)    rt=[imm+rs]  ;halfword sign-extended
 func (cpu *CPU) OpLoadHWord(opcode uint32) {
-	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	imm16 := SignExtendedWord(GetRange(opcode, 0, 16))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	addr := cpu.reg(rs) + imm16
 
@@ -340,9 +340,9 @@ func (cpu *CPU) OpLoadHWord(opcode uint32) {
 // IMPORTANT NOTE: "left" refers to the *most* significant part not least significant part
 // see also CPU::OpLoadWordRight
 func (cpu *CPU) OpLoadWordLeft(opcode uint32) {
-	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	imm16 := SignExtendedWord(GetRange(opcode, 0, 16))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	addr := cpu.reg(rs) + imm16
 
@@ -414,9 +414,9 @@ func (cpu *CPU) OpLoadWordLeft(opcode uint32) {
 // 100xxx | rs   | rt   | <--immediate16bit--> | load rt,[rs+imm]
 // lw  rt,imm(rs)    rt=[imm+rs]  ;word
 func (cpu *CPU) OpLoadWord(opcode uint32) {
-	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	imm16 := SignExtendedWord(GetRange(opcode, 0, 16))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	addr := cpu.reg(rs) + imm16
 
@@ -436,9 +436,9 @@ func (cpu *CPU) OpLoadWord(opcode uint32) {
 // 100xxx | rs   | rt   | <--immediate16bit--> | load rt,[rs+imm]
 // lbu rt,imm(rs)    rt=[imm+rs]  ;byte zero-extended
 func (cpu *CPU) OpLoadByteU(opcode uint32) {
-	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	imm16 := SignExtendedWord(GetRange(opcode, 0, 16))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	addr := cpu.reg(rs) + imm16
 	val := uint32(cpu.Core.Bus.Read8(addr)) // zero extended
@@ -453,9 +453,9 @@ func (cpu *CPU) OpLoadByteU(opcode uint32) {
 // 100xxx | rs   | rt   | <--immediate16bit--> | load rt,[rs+imm]
 // lhu rt,imm(rs)    rt=[imm+rs]  ;halfword zero-extended
 func (cpu *CPU) OpLoadHWordU(opcode uint32) {
-	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	imm16 := SignExtendedWord(GetRange(opcode, 0, 16))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	addr := cpu.reg(rs) + imm16
 
@@ -475,9 +475,9 @@ func (cpu *CPU) OpLoadHWordU(opcode uint32) {
 // 100xxx | rs   | rt   | <--immediate16bit--> | load rt,[rs+imm]
 // lwr   rt,imm(rs)     load right bits of rt from memory (usually imm+0)
 func (cpu *CPU) OpLoadWordRight(opcode uint32) {
-	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	imm16 := SignExtendedWord(GetRange(opcode, 0, 16))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	addr := cpu.reg(rs) + imm16
 
@@ -518,9 +518,9 @@ func (cpu *CPU) OpStoreByte(opcode uint32) {
 		return
 	}
 
-	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	imm16 := SignExtendedWord(GetRange(opcode, 0, 16))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	addr := cpu.reg(rs) + imm16
 	val := uint8(cpu.reg(rt))
@@ -539,9 +539,9 @@ func (cpu *CPU) OpStoreHWord(opcode uint32) {
 		return
 	}
 
-	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	imm16 := SignExtendedWord(GetRange(opcode, 0, 16))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	addr := cpu.reg(rs) + imm16
 
@@ -562,9 +562,9 @@ func (cpu *CPU) OpStoreHWord(opcode uint32) {
 // swl   rt,imm(rs)     store left  bits of rt to memory (usually imm+3)
 // see also CPU::OpStoreWordRight
 func (cpu *CPU) OpStoreWordLeft(opcode uint32) {
-	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	imm16 := SignExtendedWord(GetRange(opcode, 0, 16))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	addr := cpu.reg(rs) + imm16
 	val := cpu.reg(rt)
@@ -599,9 +599,9 @@ func (cpu *CPU) OpStoreWord(opcode uint32) {
 		return
 	}
 
-	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	imm16 := SignExtendedWord(GetRange(opcode, 0, 16))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	addr := cpu.reg(rs) + imm16
 
@@ -621,9 +621,9 @@ func (cpu *CPU) OpStoreWord(opcode uint32) {
 // 101xxx | rs   | rt   | <--immediate16bit--> | store rt,[rs+imm]
 // swr   rt,imm(rs)     store right bits of rt to memory (usually imm+0)
 func (cpu *CPU) OpStoreWordRight(opcode uint32) {
-	imm16 := SignExtendedWord(GetValue(opcode, 0, 16))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	imm16 := SignExtendedWord(GetRange(opcode, 0, 16))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	addr := cpu.reg(rs) + imm16
 	val := cpu.reg(rt)
@@ -657,9 +657,9 @@ Secondary opcodes are implemented here
 // 000000 | N/A  | rt   | rd   | imm5 | 0000xx | shift-imm
 // sll  rd,rt,imm         rd = rt SHL (00h..1Fh)
 func (cpu *CPU) OpSLL(opcode uint32) {
-	imm5 := GetValue(opcode, 6, 5)
-	rd := int(GetValue(opcode, 11, 5))
-	rt := int(GetValue(opcode, 16, 5))
+	imm5 := GetRange(opcode, 6, 5)
+	rd := int(GetRange(opcode, 11, 5))
+	rt := int(GetRange(opcode, 16, 5))
 
 	val := cpu.reg(rt) << imm5
 	cpu.modifyReg(rd, val)
@@ -672,9 +672,9 @@ func (cpu *CPU) OpSLL(opcode uint32) {
 // 000000 | N/A  | rt   | rd   | imm5 | 0000xx | shift-imm
 // srl  rd,rt,imm         rd = rt SHR (00h..1Fh)
 func (cpu *CPU) OpSRL(opcode uint32) {
-	imm5 := GetValue(opcode, 6, 5)
-	rd := int(GetValue(opcode, 11, 5))
-	rt := int(GetValue(opcode, 16, 5))
+	imm5 := GetRange(opcode, 6, 5)
+	rd := int(GetRange(opcode, 11, 5))
+	rt := int(GetRange(opcode, 16, 5))
 
 	val := cpu.reg(rt) >> imm5
 	cpu.modifyReg(rd, val)
@@ -687,9 +687,9 @@ func (cpu *CPU) OpSRL(opcode uint32) {
 // 000000 | N/A  | rt   | rd   | imm5 | 0000xx | shift-imm
 // sra  rd,rt,imm         rd = rt SAR (00h..1Fh)
 func (cpu *CPU) OpSRA(opcode uint32) {
-	imm5 := GetValue(opcode, 6, 5)
-	rd := int(GetValue(opcode, 11, 5))
-	rt := int(GetValue(opcode, 16, 5))
+	imm5 := GetRange(opcode, 6, 5)
+	rd := int(GetRange(opcode, 11, 5))
+	rt := int(GetRange(opcode, 16, 5))
 
 	val := int32(cpu.reg(rt)) >> imm5
 	cpu.modifyReg(rd, uint32(val))
@@ -702,9 +702,9 @@ func (cpu *CPU) OpSRA(opcode uint32) {
 // 000000 | rs   | rt   | rd   | N/A  | 0001xx | shift-reg
 // sllv rd,rt,rs          rd = rt SHL (rs AND 1Fh)
 func (cpu *CPU) OpSLLV(opcode uint32) {
-	rd := int(GetValue(opcode, 11, 5))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	rd := int(GetRange(opcode, 11, 5))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	val := cpu.reg(rt) << (cpu.reg(rs) & 0x1f)
 	cpu.modifyReg(rd, val)
@@ -717,9 +717,9 @@ func (cpu *CPU) OpSLLV(opcode uint32) {
 // 000000 | rs   | rt   | rd   | N/A  | 0001xx | shift-reg
 // srlv rd,rt,rs          rd = rt SHR (rs AND 1Fh)
 func (cpu *CPU) OpSRLV(opcode uint32) {
-	rd := int(GetValue(opcode, 11, 5))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	rd := int(GetRange(opcode, 11, 5))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	val := cpu.reg(rt) >> (cpu.reg(rs) & 0x1f)
 	cpu.modifyReg(rd, val)
@@ -732,9 +732,9 @@ func (cpu *CPU) OpSRLV(opcode uint32) {
 // 000000 | rs   | rt   | rd   | N/A  | 0001xx | shift-reg
 // srav rd,rt,rs          rd = rt SAR (rs AND 1Fh)
 func (cpu *CPU) OpSRAV(opcode uint32) {
-	rd := int(GetValue(opcode, 11, 5))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	rd := int(GetRange(opcode, 11, 5))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	val := int32(cpu.reg(rt)) >> (cpu.reg(rs) & 0x1f)
 	cpu.modifyReg(rd, uint32(val))
@@ -747,7 +747,7 @@ func (cpu *CPU) OpSRAV(opcode uint32) {
 // 000000 | rs   | N/A  | N/A  | N/A  | 001000 | jr
 // jr     rs          pc=rs
 func (cpu *CPU) OpJR(opcode uint32) {
-	rs := int(GetValue(opcode, 21, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	cpu.next_pc = cpu.reg(rs)
 	cpu.isBranch = true
@@ -760,8 +760,8 @@ func (cpu *CPU) OpJR(opcode uint32) {
 // 000000 | rs   | N/A  | rd   | N/A  | 001001 | jalr
 // jalr (rd,)rs(,rd)  pc=rs, rd=$+8
 func (cpu *CPU) OpJALR(opcode uint32) {
-	rd := int(GetValue(opcode, 11, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	rd := int(GetRange(opcode, 11, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	cpu.modifyReg(rd, cpu.next_pc) // store the return address in rd
 	cpu.next_pc = cpu.reg(rs)
@@ -775,7 +775,7 @@ func (cpu *CPU) OpJALR(opcode uint32) {
 // 000000 | <-----comment20bit------> | 00110x | sys/brk
 // syscall  imm20        generates a system call exception
 func (cpu *CPU) OpSYS(opcode uint32) {
-	// comment := GetValue(opcode, 6, 20)
+	// comment := GetRange(opcode, 6, 20)
 
 	cpu.enterException(EXC_SYSCALL)
 }
@@ -787,7 +787,7 @@ func (cpu *CPU) OpSYS(opcode uint32) {
 // 000000 | <-----comment20bit------> | 00110x | sys/brk
 // break    imm20        generates a breakpoint exception
 func (cpu *CPU) OpBRK(opcode uint32) {
-	// comment := GetValue(opcode, 6, 20)
+	// comment := GetRange(opcode, 6, 20)
 
 	cpu.enterException(EXC_BREAK)
 }
@@ -799,7 +799,7 @@ func (cpu *CPU) OpBRK(opcode uint32) {
 // 000000 | N/A  | N/A  | rd   | N/A  | 0100x0 | mfhi/mflo
 // mfhi   rd              rd=hi  ;move from hi
 func (cpu *CPU) OpMFHI(opcode uint32) {
-	rd := int(GetValue(opcode, 11, 5))
+	rd := int(GetRange(opcode, 11, 5))
 
 	cpu.modifyReg(rd, cpu.hi)
 }
@@ -811,7 +811,7 @@ func (cpu *CPU) OpMFHI(opcode uint32) {
 // 000000 | rs   | N/A  | N/A  | N/A  | 0100x1 | mthi/mtlo
 // mthi   rs              hi=rs  ;move to hi
 func (cpu *CPU) OpMTHI(opcode uint32) {
-	rs := int(GetValue(opcode, 21, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	cpu.hi = cpu.reg(rs)
 }
@@ -823,7 +823,7 @@ func (cpu *CPU) OpMTHI(opcode uint32) {
 // 000000 | N/A  | N/A  | rd   | N/A  | 0100x0 | mfhi/mflo
 // mflo   rd              rd=lo  ;move from lo
 func (cpu *CPU) OpMFLO(opcode uint32) {
-	rd := int(GetValue(opcode, 11, 5))
+	rd := int(GetRange(opcode, 11, 5))
 
 	cpu.modifyReg(rd, cpu.lo)
 }
@@ -835,7 +835,7 @@ func (cpu *CPU) OpMFLO(opcode uint32) {
 // 000000 | rs   | N/A  | N/A  | N/A  | 0100x1 | mthi/mtlo
 // mtlo   rs              lo=rs  ;move to lo
 func (cpu *CPU) OpMTLO(opcode uint32) {
-	rs := int(GetValue(opcode, 21, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	cpu.lo = cpu.reg(rs)
 }
@@ -847,8 +847,8 @@ func (cpu *CPU) OpMTLO(opcode uint32) {
 // 000000 | rs   | rt   | N/A  | N/A  | 0110xx | mul/div
 // mult   rs,rt           hi:lo = rs*rt (signed)
 func (cpu *CPU) OpMULT(opcode uint32) {
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	a := int64(int32(cpu.reg(rs)))
 	b := int64(int32(cpu.reg(rt)))
@@ -865,8 +865,8 @@ func (cpu *CPU) OpMULT(opcode uint32) {
 // 000000 | rs   | rt   | N/A  | N/A  | 0110xx | mul/div
 // multu  rs,rt           hi:lo = rs*rt (unsigned)
 func (cpu *CPU) OpMULTU(opcode uint32) {
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	a := uint64(cpu.reg(rs))
 	b := uint64(cpu.reg(rt))
@@ -884,8 +884,8 @@ func (cpu *CPU) OpMULTU(opcode uint32) {
 // div    rs,rt           lo = rs/rt, hi=rs mod rt (signed)
 // TODO timing
 func (cpu *CPU) OpDIV(opcode uint32) {
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	a := int32(cpu.reg(rs))
 	b := int32(cpu.reg(rt))
@@ -915,8 +915,8 @@ func (cpu *CPU) OpDIV(opcode uint32) {
 // divu   rs,rt           lo = rs/rt, hi=rs mod rt (unsigned)
 // TODO timing
 func (cpu *CPU) OpDIVU(opcode uint32) {
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	a := cpu.reg(rs)
 	b := cpu.reg(rt)
@@ -937,9 +937,9 @@ func (cpu *CPU) OpDIVU(opcode uint32) {
 // 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
 // add   rd,rs,rt         rd=rs+rt (with overflow trap)
 func (cpu *CPU) OpADD(opcode uint32) {
-	rd := int(GetValue(opcode, 11, 5))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	rd := int(GetRange(opcode, 11, 5))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	a := int32(cpu.reg(rs))
 	b := int32(cpu.reg(rt))
@@ -961,9 +961,9 @@ func (cpu *CPU) OpADD(opcode uint32) {
 // 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
 // addu  rd,rs,rt         rd=rs+rt
 func (cpu *CPU) OpADDU(opcode uint32) {
-	rd := int(GetValue(opcode, 11, 5))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	rd := int(GetRange(opcode, 11, 5))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	val := cpu.reg(rs) + cpu.reg(rt)
 	cpu.modifyReg(rd, val)
@@ -976,9 +976,9 @@ func (cpu *CPU) OpADDU(opcode uint32) {
 // 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
 // sub   rd,rs,rt         rd=rs-rt (with overflow trap)
 func (cpu *CPU) OpSUB(opcode uint32) {
-	rd := int(GetValue(opcode, 11, 5))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	rd := int(GetRange(opcode, 11, 5))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	a := int32(cpu.reg(rs))
 	b := int32(cpu.reg(rt))
@@ -999,9 +999,9 @@ func (cpu *CPU) OpSUB(opcode uint32) {
 // 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
 // subu  rd,rs,rt         rd=rs-rt
 func (cpu *CPU) OpSUBU(opcode uint32) {
-	rd := int(GetValue(opcode, 11, 5))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	rd := int(GetRange(opcode, 11, 5))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	val := cpu.reg(rs) - cpu.reg(rt)
 	cpu.modifyReg(rd, val)
@@ -1014,9 +1014,9 @@ func (cpu *CPU) OpSUBU(opcode uint32) {
 // 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
 // and  rd,rs,rt         rd = rs AND rt
 func (cpu *CPU) OpAND(opcode uint32) {
-	rd := int(GetValue(opcode, 11, 5))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	rd := int(GetRange(opcode, 11, 5))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	val := cpu.reg(rs) & cpu.reg(rt)
 	cpu.modifyReg(rd, val)
@@ -1029,9 +1029,9 @@ func (cpu *CPU) OpAND(opcode uint32) {
 // 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
 // or   rd,rs,rt         rd = rs OR  rt
 func (cpu *CPU) OpOR(opcode uint32) {
-	rd := int(GetValue(opcode, 11, 5))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	rd := int(GetRange(opcode, 11, 5))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	val := cpu.reg(rs) | cpu.reg(rt)
 	cpu.modifyReg(rd, val)
@@ -1044,9 +1044,9 @@ func (cpu *CPU) OpOR(opcode uint32) {
 // 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
 // xor  rd,rs,rt         rd = rs XOR rt
 func (cpu *CPU) OpXOR(opcode uint32) {
-	rd := int(GetValue(opcode, 11, 5))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	rd := int(GetRange(opcode, 11, 5))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	val := cpu.reg(rs) ^ cpu.reg(rt)
 	cpu.modifyReg(rd, val)
@@ -1059,9 +1059,9 @@ func (cpu *CPU) OpXOR(opcode uint32) {
 // 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
 // nor  rd,rs,rt         rd = FFFFFFFFh XOR (rs OR rt)
 func (cpu *CPU) OpNOR(opcode uint32) {
-	rd := int(GetValue(opcode, 11, 5))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	rd := int(GetRange(opcode, 11, 5))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	val := cpu.reg(rs) | cpu.reg(rt)
 	val = ^val
@@ -1075,9 +1075,9 @@ func (cpu *CPU) OpNOR(opcode uint32) {
 // 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
 // setlt slt   rd,rs,rt  if rs<rt then rd=1 else rd=0 (signed)
 func (cpu *CPU) OpSLT(opcode uint32) {
-	rd := int(GetValue(opcode, 11, 5))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	rd := int(GetRange(opcode, 11, 5))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	test := int32(cpu.reg(rs)) < int32(cpu.reg(rt))
 	if test {
@@ -1094,9 +1094,9 @@ func (cpu *CPU) OpSLT(opcode uint32) {
 // 000000 | rs   | rt   | rd   | N/A  | 10xxxx | alu-reg
 // setb  sltu  rd,rs,rt  if rs<rt then rd=1 else rd=0 (unsigned)
 func (cpu *CPU) OpSLTU(opcode uint32) {
-	rd := int(GetValue(opcode, 11, 5))
-	rt := int(GetValue(opcode, 16, 5))
-	rs := int(GetValue(opcode, 21, 5))
+	rd := int(GetRange(opcode, 11, 5))
+	rt := int(GetRange(opcode, 16, 5))
+	rs := int(GetRange(opcode, 21, 5))
 
 	test := cpu.reg(rs) < cpu.reg(rt)
 	if test {
@@ -1117,8 +1117,8 @@ Coprocessor opcodes are implemented here
 // 0100nn |0|0000| rt   | rd   | N/A  | 000000 | MFCn rt,rd_dat  ;rt = dat
 // mfc# rt,rd       ;rt = cop#datRd ;data regs
 func (cpu *CPU) OpMFC0(opcode uint32) {
-	rd := GetValue(opcode, 11, 5)
-	rt := int(GetValue(opcode, 16, 5))
+	rd := GetRange(opcode, 11, 5)
+	rt := int(GetRange(opcode, 16, 5))
 
 	var val uint32
 	switch rd {
@@ -1142,8 +1142,8 @@ func (cpu *CPU) OpMFC0(opcode uint32) {
 // 0100nn |0|0100| rt   | rd   | N/A  | 000000 | MTCn rt,rd_dat  ;dat = rt
 // mtc# rt,rd       ;cop#datRd = rt ;data regs
 func (cpu *CPU) OpMTC0(opcode uint32) {
-	rd := GetValue(opcode, 11, 5)
-	rt := int(GetValue(opcode, 16, 5))
+	rd := GetRange(opcode, 11, 5)
+	rt := int(GetRange(opcode, 16, 5))
 
 	val := cpu.reg(rt)
 	switch rd {
@@ -1169,7 +1169,7 @@ func (cpu *CPU) OpMTC0(opcode uint32) {
 // 010000 |1|0000| N/A  | N/A  | N/A  | 010000 | COP0 10h  ;=RFE
 // rfe
 func (cpu *CPU) OpRFE(opcode uint32) {
-	if GetValue(opcode, 0, 6) != 0b010000 {
+	if GetRange(opcode, 0, 6) != 0b010000 {
 		panic(fmt.Sprintf("[CPU::OpRFE] Unknown opcode: %x", opcode))
 	}
 

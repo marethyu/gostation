@@ -108,13 +108,13 @@ func (gpu *GPU) RenderTexturedQuad() {
 	clutIndex := gpu.fifo.buffer[2] >> 16
 	texPage := gpu.fifo.buffer[4] >> 16
 
-	clutX := GetValue(clutIndex, 0, 6) * 16
-	clutY := GetValue(clutIndex, 6, 9)
+	clutX := GetRange(clutIndex, 0, 6) * 16
+	clutY := GetRange(clutIndex, 6, 9)
 
-	texPageUBase := GetValue(texPage, 0, 4) * 64
-	texPageVBase := GetValue(texPage, 4, 1) * 256
+	texPageUBase := GetRange(texPage, 0, 4) * 64
+	texPageVBase := GetRange(texPage, 4, 1) * 256
 
-	texFormat := GetValue(texPage, 7, 2)
+	texFormat := GetRange(texPage, 7, 2)
 
 	if texFormat == TEXTURE_FORMAT_reserved {
 		panic("[GPU::TexturedQuad] reserved texture format")
@@ -202,9 +202,9 @@ func (gpu *GPU) TexturedTriangle(v1, v2, v3 *Vertex, clutX uint32, clutY uint32,
 
 				// don't draw black texels
 				if texel > 0 {
-					// r := uint8(GetValue(uint32(texel), 0, 5) << 3)
-					// g := uint8(GetValue(uint32(texel), 5, 5) << 3)
-					// b := uint8(GetValue(uint32(texel), 10, 5) << 3)
+					// r := uint8(GetRange(uint32(texel), 0, 5) << 3)
+					// g := uint8(GetRange(uint32(texel), 5, 5) << 3)
+					// b := uint8(GetRange(uint32(texel), 10, 5) << 3)
 					// gpu.Pixel(uint32(x), uint32(y), r, g, b)
 
 					gpu.vram.Write16(uint32(x), uint32(y), uint16(texel))
@@ -217,9 +217,9 @@ func (gpu *GPU) TexturedTriangle(v1, v2, v3 *Vertex, clutX uint32, clutY uint32,
 func (gpu *GPU) Pixel(x uint32, y uint32, r, g, b uint8) {
 	var colour uint32 = 0
 
-	PackValue(&colour, 0, uint32(r>>3), 5)
-	PackValue(&colour, 5, uint32(g>>3), 5)
-	PackValue(&colour, 10, uint32(b>>3), 5)
+	PackRange(&colour, 0, uint32(r>>3), 5)
+	PackRange(&colour, 5, uint32(g>>3), 5)
+	PackRange(&colour, 10, uint32(b>>3), 5)
 
 	gpu.vram.Write16(x, y, uint16(colour))
 }

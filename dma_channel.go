@@ -115,12 +115,12 @@ func (channel *DMAChannel) Read32(offset uint32) uint32 {
 		ModifyBit(&control, 0, channel.RAMToDevice)
 		ModifyBit(&control, 1, channel.addressDecrement)
 		ModifyBit(&control, 8, channel.choppingEnable)
-		PackValue(&control, 9, uint32(channel.syncMode), 2)
-		PackValue(&control, 16, uint32(channel.choppingDMAWind), 3)
-		PackValue(&control, 20, uint32(channel.choppingCPUWind), 3)
+		PackRange(&control, 9, uint32(channel.syncMode), 2)
+		PackRange(&control, 16, uint32(channel.choppingDMAWind), 3)
+		PackRange(&control, 20, uint32(channel.choppingCPUWind), 3)
 		ModifyBit(&control, 24, channel.start)
 		ModifyBit(&control, 28, channel.trigger)
-		PackValue(&control, 29, uint32(channel.unknown), 2)
+		PackRange(&control, 29, uint32(channel.unknown), 2)
 
 		return control
 	default:
@@ -139,12 +139,12 @@ func (channel *DMAChannel) Write32(offset uint32, data uint32) {
 		channel.RAMToDevice = TestBit(data, 0)
 		channel.addressDecrement = TestBit(data, 1)
 		channel.choppingEnable = TestBit(data, 8)
-		channel.syncMode = uint8(GetValue(data, 9, 2))
-		channel.choppingDMAWind = uint8(GetValue(data, 16, 3))
-		channel.choppingCPUWind = uint8(GetValue(data, 20, 3))
+		channel.syncMode = uint8(GetRange(data, 9, 2))
+		channel.choppingDMAWind = uint8(GetRange(data, 16, 3))
+		channel.choppingCPUWind = uint8(GetRange(data, 20, 3))
 		channel.start = TestBit(data, 24)
 		channel.trigger = TestBit(data, 28)
-		channel.unknown = uint8(GetValue(data, 29, 2))
+		channel.unknown = uint8(GetRange(data, 29, 2))
 	default:
 		panic(fmt.Sprintf("[DMAChannel::Write32] Attempt to write %x to invalid offset: %x", data, offset))
 	}
