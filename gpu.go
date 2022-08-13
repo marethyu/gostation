@@ -258,7 +258,6 @@ func (gpu *GPU) GPUREAD() uint32 {
 		gpu.wordsLeft -= 1
 
 		if gpu.wordsLeft == 0 {
-			fmt.Printf("[GPU::GPUREAD] vram to cpu blit done\n")
 			gpu.mode = MODE_NORMAL
 		}
 
@@ -310,7 +309,6 @@ func (gpu *GPU) WriteGP0(data uint32) {
 		gpu.wordsLeft -= 1
 
 		if gpu.wordsLeft == 0 {
-			fmt.Printf("[GPU::WriteGP0] cpu to vram blit done\n")
 			gpu.mode = MODE_NORMAL
 		}
 
@@ -424,8 +422,6 @@ func (gpu *GPU) InitRenderPolygonCommand(cmd uint32) {
 	gpu.mode = MODE_RENDERING
 	gpu.fifo.Init(narg)
 	gpu.fifo.Push(cmd) // the initial command can be treated as the first argument
-
-	fmt.Printf("[GPU::ExecuteRenderPolygonCommand] nargs=%d\n", narg)
 }
 
 /*

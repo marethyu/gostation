@@ -21,17 +21,50 @@ works with 3 point polygons.
 */
 func (gpu *GPU) DoRenderPolygon() {
 	switch gpu.shape_attr {
-	case 0b01100:
-		gpu.RenderTexturedQuad()
 	case 0b10000:
 		gpu.RenderTrigGouraud()
 	case 0b01000:
 		gpu.RenderMonochromeQuad()
 	case 0b11000:
 		gpu.RenderQuadGouraud()
+	case 0b01100:
+		gpu.RenderTexturedQuad()
 	default:
 		panic(fmt.Sprintf("[GPU::DoRenderPolygon] Unknown attribute: %05b\n", gpu.shape_attr))
 	}
+}
+
+func (gpu *GPU) RenderTrigGouraud() {
+	v1 := NewVertex(gpu.fifo.buffer[1], gpu.fifo.buffer[0], 0)
+	v2 := NewVertex(gpu.fifo.buffer[3], gpu.fifo.buffer[2], 0)
+	v3 := NewVertex(gpu.fifo.buffer[5], gpu.fifo.buffer[4], 0)
+
+	// make sure that vertexes are in clockwise order
+	gpu.ShadedTriangle(v1, v2, v3)
+}
+
+func (gpu *GPU) RenderMonochromeQuad() {
+	colour := gpu.fifo.buffer[0]
+
+	v1 := NewVertex(gpu.fifo.buffer[1], colour, 0)
+	v2 := NewVertex(gpu.fifo.buffer[2], colour, 0)
+	v3 := NewVertex(gpu.fifo.buffer[3], colour, 0)
+	v4 := NewVertex(gpu.fifo.buffer[4], colour, 0)
+
+	// make sure that vertexes are in clockwise order
+	gpu.ShadedTriangle(v1, v2, v3)
+	gpu.ShadedTriangle(v2, v4, v3)
+}
+
+func (gpu *GPU) RenderQuadGouraud() {
+	v1 := NewVertex(gpu.fifo.buffer[1], gpu.fifo.buffer[0], 0)
+	v2 := NewVertex(gpu.fifo.buffer[3], gpu.fifo.buffer[2], 0)
+	v3 := NewVertex(gpu.fifo.buffer[5], gpu.fifo.buffer[4], 0)
+	v4 := NewVertex(gpu.fifo.buffer[7], gpu.fifo.buffer[6], 0)
+
+	// make sure that vertexes are in clockwise order
+	gpu.ShadedTriangle(v1, v2, v3)
+	gpu.ShadedTriangle(v2, v4, v3)
 }
 
 /*
@@ -72,16 +105,16 @@ func (gpu *GPU) RenderTexturedQuad() {
 	v3 := NewVertex(gpu.fifo.buffer[5], colour, gpu.fifo.buffer[6])
 	v4 := NewVertex(gpu.fifo.buffer[7], colour, gpu.fifo.buffer[8])
 
-	clutIndex := uint16(gpu.fifo.buffer[2] >> 16)
-	texPage := uint16(gpu.fifo.buffer[4] >> 16)
+	clutIndex := gpu.fifo.buffer[2] >> 16
+	texPage := gpu.fifo.buffer[4] >> 16
 
-	clutX := GetValue(uint32(clutIndex), 0, 6) * 16
-	clutY := GetValue(uint32(clutIndex), 6, 9)
+	clutX := GetValue(clutIndex, 0, 6) * 16
+	clutY := GetValue(clutIndex, 6, 9)
 
-	texPageUBase := GetValue(uint32(texPage), 0, 4) * 64
-	texPageVBase := GetValue(uint32(texPage), 4, 1) * 256
+	texPageUBase := GetValue(texPage, 0, 4) * 64
+	texPageVBase := GetValue(texPage, 4, 1) * 256
 
-	texFormat := GetValue(uint32(texPage), 7, 2)
+	texFormat := GetValue(texPage, 7, 2)
 
 	if texFormat == TEXTURE_FORMAT_reserved {
 		panic("[GPU::TexturedQuad] reserved texture format")
@@ -92,37 +125,35 @@ func (gpu *GPU) RenderTexturedQuad() {
 	gpu.TexturedTriangle(v2, v4, v3, clutX, clutY, texPageUBase, texPageVBase, texFormat)
 }
 
-func (gpu *GPU) RenderTrigGouraud() {
-	v1 := NewVertex(gpu.fifo.buffer[1], gpu.fifo.buffer[0], 0)
-	v2 := NewVertex(gpu.fifo.buffer[3], gpu.fifo.buffer[2], 0)
-	v3 := NewVertex(gpu.fifo.buffer[5], gpu.fifo.buffer[4], 0)
+/* lol self plagiarised from https://github.com/marethyu/mgl/blob/main/mygl.h#L133 */
+func (gpu *GPU) ShadedTriangle(v1, v2, v3 *Vertex) {
+	// Area of the parallelogram formed by edge vectors
+	area := float32(int32(v3.x-v1.x)*int32(v2.y-v1.y) - int32(v3.y-v1.y)*int32(v2.x-v1.x))
 
-	// make sure that vertexes are in clockwise order
-	gpu.ShadedTriangle(v1, v2, v3)
-}
+	// top left and bottom right points of a bounding box (-1 bc bottom and right edges are not drawn)
+	xmin := MinOf(v1.x, v2.x, v3.x)
+	xmax := MaxOf(v1.x, v2.x, v3.x) - 1
+	ymin := MinOf(v1.y, v2.y, v3.y)
+	ymax := MaxOf(v1.y, v2.y, v3.y) - 1
 
-func (gpu *GPU) RenderMonochromeQuad() {
-	colour := gpu.fifo.buffer[0]
+	// TODO clipping
 
-	v1 := NewVertex(gpu.fifo.buffer[1], colour, 0)
-	v2 := NewVertex(gpu.fifo.buffer[2], colour, 0)
-	v3 := NewVertex(gpu.fifo.buffer[3], colour, 0)
-	v4 := NewVertex(gpu.fifo.buffer[4], colour, 0)
+	for y := ymin; y <= ymax; y += 1 {
+		for x := xmin; x <= xmax; x += 1 {
+			// Barycentric weights
+			w1 := float32(int32(x-v2.x)*int32(v3.y-v2.y)-int32(y-v2.y)*int32(v3.x-v2.x)) / area
+			w2 := float32(int32(x-v3.x)*int32(v1.y-v3.y)-int32(y-v3.y)*int32(v1.x-v3.x)) / area
+			w3 := float32(int32(x-v1.x)*int32(v2.y-v1.y)-int32(y-v1.y)*int32(v2.x-v1.x)) / area
 
-	// make sure that vertexes are in clockwise order
-	gpu.ShadedTriangle(v1, v2, v3)
-	gpu.ShadedTriangle(v2, v4, v3)
-}
+			if (w1 >= 0.0) && (w2 >= 0.0) && (w3 >= 0.0) {
+				r := uint8(w1*float32(v1.r) + w2*float32(v2.r) + w3*float32(v3.r))
+				g := uint8(w1*float32(v1.g) + w2*float32(v2.g) + w3*float32(v3.g))
+				b := uint8(w1*float32(v1.b) + w2*float32(v2.b) + w3*float32(v3.b))
 
-func (gpu *GPU) RenderQuadGouraud() {
-	v1 := NewVertex(gpu.fifo.buffer[1], gpu.fifo.buffer[0], 0)
-	v2 := NewVertex(gpu.fifo.buffer[3], gpu.fifo.buffer[2], 0)
-	v3 := NewVertex(gpu.fifo.buffer[5], gpu.fifo.buffer[4], 0)
-	v4 := NewVertex(gpu.fifo.buffer[7], gpu.fifo.buffer[6], 0)
-
-	// make sure that vertexes are in clockwise order
-	gpu.ShadedTriangle(v1, v2, v3)
-	gpu.ShadedTriangle(v2, v4, v3)
+				gpu.Pixel(uint32(x), uint32(y), r, g, b)
+			}
+		}
+	}
 }
 
 /*
@@ -166,8 +197,7 @@ func (gpu *GPU) TexturedTriangle(v1, v2, v3 *Vertex, clutX uint32, clutY uint32,
 					index := uint32((texel16 >> ((u % 2) * 8)) & 0xff)
 					texel = gpu.vram.Read16(clutX+index, clutY)
 				case TEXTURE_FORMAT_15b:
-					texel16 := gpu.vram.Read16(texPageUBase+u, texPageVBase+v)
-					texel = texel16
+					texel = gpu.vram.Read16(texPageUBase+u, texPageVBase+v)
 				}
 
 				// don't draw black texels
@@ -178,37 +208,6 @@ func (gpu *GPU) TexturedTriangle(v1, v2, v3 *Vertex, clutX uint32, clutY uint32,
 
 					gpu.Pixel(uint32(x), uint32(y), r, g, b)
 				}
-			}
-		}
-	}
-}
-
-/* lol self plagiarised from https://github.com/marethyu/mgl/blob/main/mygl.h#L133 */
-func (gpu *GPU) ShadedTriangle(v1, v2, v3 *Vertex) {
-	// Area of the parallelogram formed by edge vectors
-	area := float32(int32(v3.x-v1.x)*int32(v2.y-v1.y) - int32(v3.y-v1.y)*int32(v2.x-v1.x))
-
-	// top left and bottom right points of a bounding box (-1 bc bottom and right edges are not drawn)
-	xmin := MinOf(v1.x, v2.x, v3.x)
-	xmax := MaxOf(v1.x, v2.x, v3.x) - 1
-	ymin := MinOf(v1.y, v2.y, v3.y)
-	ymax := MaxOf(v1.y, v2.y, v3.y) - 1
-
-	// TODO clipping
-
-	for y := ymin; y <= ymax; y += 1 {
-		for x := xmin; x <= xmax; x += 1 {
-			// Barycentric weights
-			w1 := float32(int32(x-v2.x)*int32(v3.y-v2.y)-int32(y-v2.y)*int32(v3.x-v2.x)) / area
-			w2 := float32(int32(x-v3.x)*int32(v1.y-v3.y)-int32(y-v3.y)*int32(v1.x-v3.x)) / area
-			w3 := float32(int32(x-v1.x)*int32(v2.y-v1.y)-int32(y-v1.y)*int32(v2.x-v1.x)) / area
-
-			if (w1 >= 0.0) && (w2 >= 0.0) && (w3 >= 0.0) {
-				r := uint8(w1*float32(v1.r) + w2*float32(v2.r) + w3*float32(v3.r))
-				g := uint8(w1*float32(v1.g) + w2*float32(v2.g) + w3*float32(v3.g))
-				b := uint8(w1*float32(v1.b) + w2*float32(v2.b) + w3*float32(v3.b))
-
-				gpu.Pixel(uint32(x), uint32(y), r, g, b)
 			}
 		}
 	}

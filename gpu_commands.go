@@ -1,9 +1,5 @@
 package main
 
-import (
-	"fmt"
-)
-
 /*
 	https://psx-spx.consoledev.net/graphicsprocessingunitgpu/#gp0e1h-draw-mode-setting-aka-texpage
 
@@ -136,8 +132,6 @@ func (gpu *GPU) GP0DoTransferToVRAM() {
 		size += 1
 	}
 
-	fmt.Printf("[GPU::GP0DoTransferToVRAM] width=%d,height=%d,size=%d\n", gpu.imgWidth, gpu.imgHeight, size)
-
 	// each pixel in vram is 16 bit in size and each word is 32 bit in size so divide by 2
 	gpu.wordsLeft = size / 2
 
@@ -163,8 +157,6 @@ func (gpu *GPU) GP0DoTransferFromVRAM() {
 		// must be even otherwise round up with 16 bit padding since cpu transfer 32 bit data
 		size += 1
 	}
-
-	fmt.Printf("[GPU::GP0DoTransferFromVRAM] width=%d,height=%d,size=%d\n", gpu.imgWidth, gpu.imgHeight, size)
 
 	// each pixel in vram is 16 bit in size and each word is 32 bit in size so divide by 2
 	gpu.wordsLeft = size / 2
