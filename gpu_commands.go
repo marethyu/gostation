@@ -114,14 +114,10 @@ func (gpu *GPU) GP0MaskBitSetup(data uint32) {
 }
 
 func (gpu *GPU) GP0DrawShape() {
-	fmt.Printf("[GPU::GP0DrawShape] shape=%d\n", gpu.shape)
-	fmt.Printf("[GPU::GP0DrawShape] attr=%05b\n", gpu.shape_attr)
-
-	for i := 0; i < gpu.fifo.nArgs; i++ {
-		fmt.Printf("[GPU::GP0DrawShape] arg%d=%x\n", i, gpu.fifo.buffer[i])
+	switch gpu.shape {
+	case SHAPE_POLYGON:
+		gpu.DoRenderPolygon()
 	}
-
-	// TODO
 
 	gpu.fifo.Done()
 	gpu.mode = MODE_NORMAL

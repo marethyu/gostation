@@ -400,21 +400,23 @@ func (gpu *GPU) InitRenderPolygonCommand(cmd uint32) {
 	gpu.shape = SHAPE_POLYGON
 	gpu.shape_attr = uint8(GetValue(cmd, 24, 5))
 
-	narg := 3 // polygons are triangles by default
+	nvert := 3 // polygons are triangles by default
 
 	if TestBit(cmd, 27) {
 		// well, it's quad then
-		narg += 1
+		nvert += 1
 	}
+
+	narg := nvert
 
 	if TestBit(cmd, 26) {
 		// If doing textured rendering, each vertex sent will also have a U/V texture coordinate attached to it, as well as a CLUT index.
-		narg += narg
+		narg += nvert
 	}
 
 	if TestBit(cmd, 28) {
 		// If doing gouraud shading, there will be one more color per vertex sent, and the initial color will be the one for vertex 0.
-		narg += narg - 1
+		narg += nvert - 1
 	}
 
 	narg += 1
