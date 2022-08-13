@@ -202,11 +202,12 @@ func (gpu *GPU) TexturedTriangle(v1, v2, v3 *Vertex, clutX uint32, clutY uint32,
 
 				// don't draw black texels
 				if texel > 0 {
-					r := uint8(GetValue(uint32(texel), 0, 5) << 3)
-					g := uint8(GetValue(uint32(texel), 5, 5) << 3)
-					b := uint8(GetValue(uint32(texel), 10, 5) << 3)
+					// r := uint8(GetValue(uint32(texel), 0, 5) << 3)
+					// g := uint8(GetValue(uint32(texel), 5, 5) << 3)
+					// b := uint8(GetValue(uint32(texel), 10, 5) << 3)
+					// gpu.Pixel(uint32(x), uint32(y), r, g, b)
 
-					gpu.Pixel(uint32(x), uint32(y), r, g, b)
+					gpu.vram.Write16(uint32(x), uint32(y), uint16(texel))
 				}
 			}
 		}
