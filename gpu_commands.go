@@ -93,11 +93,8 @@ func (gpu *GPU) GP0DrawingOffsetSet(data uint32) {
 	x := uint16(GetValue(data, 0, 11))
 	y := uint16(GetValue(data, 11, 11))
 
-	// x and y are 11 bit unsigned values so
-	// in order to get successful sign extension, x and y must be shifted 5 bits left (making them 16 bit unsigned)
-	// of course, shift them 5 bits right to get 11 bit signed which is what we want
-	gpu.drawingXOffset = int32(int16(x<<5) >> 5)
-	gpu.drawingYOffset = int32(int16(y<<5) >> 5)
+	gpu.drawingXOffset = int32(ForceSignExtension16(x, 11))
+	gpu.drawingYOffset = int32(ForceSignExtension16(y, 11))
 }
 
 /*

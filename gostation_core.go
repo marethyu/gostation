@@ -47,9 +47,9 @@ func (core *GoStationCore) UpdateDisplay() {
 			pixel := core.GPU.vram.Read16(uint32(x), uint32(y))
 
 			// after bitmask, shift 3 bits right to upgrade rgb values from 5 bit to 8 bit
-			r := uint8(pixel&0b11111) << 3
-			g := uint8((pixel>>5)&0b11111) << 3
-			b := uint8((pixel>>10)&0b11111) << 3
+			r := uint8(GetValue(uint32(pixel), 0, 5) << 3)
+			g := uint8(GetValue(uint32(pixel), 5, 5) << 3)
+			b := uint8(GetValue(uint32(pixel), 10, 5) << 3)
 
 			core.pixels[offset] = b
 			core.pixels[offset+1] = g
