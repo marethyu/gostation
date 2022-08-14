@@ -38,7 +38,8 @@ func run() int {
 	}
 	defer texture.Destroy()
 
-	gopsx := NewGoStation("SCPH1001.BIN")
+	gopsx := NewGoStation("roms/SCPH1001.BIN")
+	gopsx.LoadExecutable("roms/tests/psxtest_cpu/psxtest_cpu.exe")
 
 	var event sdl.Event
 	var running bool = true
@@ -51,7 +52,7 @@ func run() int {
 			}
 		}
 
-		gopsx.Step()
+		gopsx.Update()
 
 		texture.Update(nil, gopsx.pixels, int(VRAM_WIDTH)*4)
 

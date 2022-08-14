@@ -1,5 +1,9 @@
 package main
 
+import (
+	"fmt"
+)
+
 /*
 Timing:
 
@@ -18,6 +22,7 @@ type GoStationCore struct {
 	Interrupts *Interrupts
 
 	pixels []byte
+	cycles uint64
 }
 
 func NewGoStation(pathToBios string) *GoStationCore {
@@ -28,16 +33,31 @@ func NewGoStation(pathToBios string) *GoStationCore {
 	core.DMA = NewDMA(&core)
 	core.Interrupts = NewInterrupts(&core)
 	core.pixels = make([]byte, VRAM_WIDTH*VRAM_HEIGHT*4)
+	core.cycles = 0
 	return &core
 }
 
-func (core *GoStationCore) Step() {
-	for i := 1; i < CPU_CYCLES_PER_FRAME; i++ {
-		// core.CPU.Log(false)
-		core.CPU.Step()
+func (core *GoStationCore) LoadExecutable(pathToExe string) {
+	exe := NewPSXExe(pathToExe)
+
+	// emulate till pc=80030000h
+	for core.CPU.pc != 0x80030000 {
+		core.Step()
 	}
 
-	core.UpdateDisplay()
+	// copy contents of executable into the main ram
+	start := exe.Header.TAddr
+	size := exe.Header.TSize
+	for i := uint32(0); i < size; i += 1 {
+		core.Bus.Write8(start+i, exe.Data[i])
+	}
+
+	core.CPU.pc = exe.Header.PC0
+	core.CPU.next_pc = exe.Header.PC0 + 4
+
+	// TODO other fields like gp0?
+
+	fmt.Printf("[GoStationCore::LoadExecutable] executable successfully loaded; pc is now in %08x\n", core.CPU.pc)
 }
 
 func (core *GoStationCore) UpdateDisplay() {
@@ -57,4 +77,19 @@ func (core *GoStationCore) UpdateDisplay() {
 			core.pixels[offset+3] = 255
 		}
 	}
+}
+
+func (core *GoStationCore) Update() {
+	for core.cycles < CPU_CYCLES_PER_FRAME {
+		core.Step()
+	}
+	core.cycles = 0
+
+	core.UpdateDisplay()
+}
+
+func (core *GoStationCore) Step() {
+	// core.CPU.Log(false)
+	core.CPU.Step()
+	core.cycles += 1
 }
