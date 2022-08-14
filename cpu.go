@@ -311,6 +311,8 @@ func (cpu *CPU) branch(imm16 uint32) {
 
 func (cpu *CPU) identifySystemCall() string {
 	switch cpu.reg(4) {
+	case 0x0:
+		return "unknown (r4=0)"
 	case 0x1:
 		return "BIOS::EnterCriticalSection()"
 	case 0x2:
