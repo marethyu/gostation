@@ -91,5 +91,5 @@ func (core *GoStationCore) Update() {
 func (core *GoStationCore) Step() {
 	// core.CPU.Log(false)
 	core.CPU.Step()
-	core.cycles += 1
+	core.cycles += 2
 }
