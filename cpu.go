@@ -58,7 +58,7 @@ func NewCPU(core *GoStationCore) *CPU {
 func (cpu *CPU) Step() {
 	cpu.current_pc = cpu.pc
 	if cpu.current_pc%4 != 0 {
-		cpu.enterException(EXC_ADDR_ERROR_LOAD)
+		cpu.enterException(EXC_ADDR_ERROR_LOAD, "misaligned pc")
 	}
 	opcode := cpu.Core.Bus.Read32(cpu.pc)
 
@@ -268,7 +268,7 @@ func (cpu *CPU) ExecuteCOP0Opcode(opcode uint32) {
 }
 
 func (cpu *CPU) ExecuteCOP1Opcode(opcode uint32) {
-	cpu.enterException(EXC_COP_UNUSABLE)
+	cpu.enterException(EXC_COP_UNUSABLE, "PS1 does not support COP1")
 }
 
 func (cpu *CPU) ExecuteCOP2Opcode(opcode uint32) {
@@ -276,7 +276,7 @@ func (cpu *CPU) ExecuteCOP2Opcode(opcode uint32) {
 }
 
 func (cpu *CPU) ExecuteCOP3Opcode(opcode uint32) {
-	cpu.enterException(EXC_COP_UNUSABLE)
+	cpu.enterException(EXC_COP_UNUSABLE, "PS1 does not support COP3")
 }
 
 func (cpu *CPU) modifyReg(i int, v uint32) {
@@ -307,4 +307,17 @@ func (cpu *CPU) loadDelaySlotInit(i int, v uint32) {
 func (cpu *CPU) branch(imm16 uint32) {
 	cpu.next_pc = cpu.pc + (imm16 << 2)
 	cpu.isBranch = true
+}
+
+func (cpu *CPU) identifySystemCall() string {
+	switch cpu.reg(4) {
+	case 0x1:
+		return "BIOS::EnterCriticalSection()"
+	case 0x2:
+		return "BIOS::ExitCriticalSection()"
+	case 0x3:
+		return "BIOS::ChangeThreadSubFunction(addr)"
+	default:
+		return "calling BIOS::DeliverEvent(F0000010h,4000h)"
+	}
 }

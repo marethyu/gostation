@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 )
 
 /* https://psx-spx.consoledev.net/cpuspecifications/#cop0-exception-handling
@@ -37,23 +36,8 @@ const (
 )
 
 /* See also CPU::OpRFE */
-func (cpu *CPU) enterException(cause uint32) {
-	switch cause {
-	case EXC_ADDR_ERROR_LOAD:
-		fmt.Fprintln(os.Stderr, "[CPU::enterException] Misaligned address while loading")
-	case EXC_ADDR_ERROR_STORE:
-		fmt.Fprintln(os.Stderr, "[CPU::enterException] Misaligned address while storing")
-	case EXC_SYSCALL:
-		fmt.Fprintln(os.Stderr, "[CPU::enterException] System call")
-	case EXC_BREAK:
-		fmt.Fprintln(os.Stderr, "[CPU::enterException] Breakpoint")
-	case EXC_RESERVED_INS:
-		fmt.Fprintln(os.Stderr, "[CPU::enterException] Illegal or reserved instruction")
-	case EXC_COP_UNUSABLE:
-		fmt.Fprintln(os.Stderr, "[CPU::enterException] Unsupported coprocessor or unsupported coprocessor instruction")
-	case EXC_OVERFLOW:
-		fmt.Fprintln(os.Stderr, "[CPU::enterException] Overflow during addition/subtraction")
-	}
+func (cpu *CPU) enterException(cause uint32, msg string) {
+	fmt.Printf("[CPU::enterException] %s\n", msg)
 
 	var vector uint32
 	if TestBit(cpu.sr, 22) {
