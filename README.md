@@ -6,6 +6,7 @@ WIP PSX emulator in Go
 
 TODO:
 - Figure out how to load game rom
+  * also find how out to get out of a infinite loop after boot logo get displayed
 - CDROM
 - timers
 - timing
