@@ -21,6 +21,8 @@ works with 3 point polygons.
 */
 func (gpu *GPU) DoRenderPolygon() {
 	switch gpu.shape_attr {
+	case 0b00000:
+		gpu.RenderMonochromeTrig()
 	case 0b10000:
 		gpu.RenderTrigGouraud()
 	case 0b01000:
@@ -32,6 +34,17 @@ func (gpu *GPU) DoRenderPolygon() {
 	default:
 		panic(fmt.Sprintf("[GPU::DoRenderPolygon] Unknown attribute: %05b\n", gpu.shape_attr))
 	}
+}
+
+func (gpu *GPU) RenderMonochromeTrig() {
+	colour := gpu.fifo.buffer[0]
+
+	v1 := NewVertex(gpu.fifo.buffer[1], colour, 0)
+	v2 := NewVertex(gpu.fifo.buffer[2], colour, 0)
+	v3 := NewVertex(gpu.fifo.buffer[3], colour, 0)
+
+	// make sure that vertexes are in clockwise order
+	gpu.ShadedTriangle(v1, v2, v3)
 }
 
 func (gpu *GPU) RenderTrigGouraud() {
