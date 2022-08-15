@@ -168,6 +168,20 @@ func (gpu *GPU) GP0DoTransferFromVRAM() {
 	gpu.mode = MODE_VramtoCPUBlit
 }
 
+func (gpu *GPU) GP0FillVRam() {
+	// TODO
+	/*
+		x := gpu.fifo.buffer[1] & 0xffff
+		y := gpu.fifo.buffer[1] >> 16
+
+		resolution := gpu.fifo.buffer[2]
+		width := resolution & 0xffff
+		height := resolution >> 16
+	*/
+	gpu.fifo.Done()
+	gpu.mode = MODE_NORMAL
+}
+
 /*
 GP1 commands here
 */

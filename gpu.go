@@ -35,6 +35,7 @@ const (
 	MODE_RENDERING
 	MODE_CPUtoVRamBlit
 	MODE_VramtoCPUBlit
+	MODE_FillVRam
 )
 
 /* whut the forking fock why itz long */
@@ -291,6 +292,8 @@ func (gpu *GPU) WriteGP0(data uint32) {
 				gpu.GP0DoTransferToVRAM()
 			case MODE_VramtoCPUBlit:
 				gpu.GP0DoTransferFromVRAM()
+			case MODE_FillVRam:
+				gpu.GP0FillVRam()
 			case MODE_NORMAL:
 				panic("[GPU::WriteGP0] normal mode???")
 			}
@@ -377,6 +380,8 @@ func (gpu *GPU) ExecuteMiscCommand(cmd uint32) {
 		// NOP
 	case 0x1:
 		// TODO clear texture cache
+	case 0x2:
+		gpu.InitFillRectangleVRAM(cmd)
 	default:
 		panic(fmt.Sprintf("[GPU::ExecuteMiscCommand] Unknown command: %x", cmd))
 	}
@@ -483,6 +488,19 @@ func (gpu *GPU) DoVramToCPUTransfer() uint16 {
 	}
 
 	return data
+}
+
+/*
+GP0(02h) - Fill Rectangle in VRAM
+
+	1st  Color+Command     (CcBbGgRrh)  ;24bit RGB value (see note)
+	2nd  Top Left Corner   (YyyyXxxxh)  ;Xpos counted in halfwords, steps of 10h
+	3rd  Width+Height      (YsizXsizh)  ;Xsiz counted in halfwords, steps of 10h
+*/
+func (gpu *GPU) InitFillRectangleVRAM(cmd uint32) {
+	gpu.mode = MODE_FillVRam
+	gpu.fifo.Init(3)
+	gpu.fifo.Push(cmd)
 }
 
 func (gpu *GPU) ExecuteEnvironmentCommand(cmd uint32) {
