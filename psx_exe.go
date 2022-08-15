@@ -105,7 +105,7 @@ func NewPSXExe(pathToExe string) *PSXExecutable {
 	bufr := bufio.NewReader(exe)
 	_, err = bufr.Read(bytes)
 
-	bytes = bytes[0x800:] // remove the header
+	bytes = bytes[0x800-76:] // remove the header (we already parsed the header data so we need to remove zeroes)
 
 	return &PSXExecutable{
 		header,

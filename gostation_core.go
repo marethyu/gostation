@@ -81,6 +81,7 @@ func (core *GoStationCore) UpdateDisplay() {
 
 func (core *GoStationCore) Update() {
 	for core.cycles < CPU_CYCLES_PER_FRAME {
+		// core.CPU.Log(true)
 		core.Step()
 	}
 	core.cycles = 0
@@ -89,7 +90,6 @@ func (core *GoStationCore) Update() {
 }
 
 func (core *GoStationCore) Step() {
-	// core.CPU.Log(false)
 	core.CPU.Step()
 	core.cycles += 2
 }

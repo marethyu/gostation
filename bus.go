@@ -76,6 +76,7 @@ type Bus struct {
 	Core           *GoStationCore
 	Ram            Access
 	Bios           Access
+	ScratchPad     Access
 	MemoryControl1 *MemoryControl1
 	SPU            Access
 	Timer          Access /* TODO */
@@ -94,6 +95,7 @@ func NewBus(core *GoStationCore, pathToBios string) *Bus {
 		core,
 		NewMemory(make([]uint8, 2*1024*1024), 0x00000000, 2*1024*1024),
 		NewMemory(bios, 0x1fc00000, 1024*512),
+		NewMemory(make([]uint8, 0x400), 0x1f800000, 0x400),
 		NewMemoryControl1(),
 		NewMemory(make([]uint8, 640), 0x1f801c00, 640),
 		NewMemory(make([]uint8, 3*16), 0x1f801100, 3*16),
@@ -176,6 +178,10 @@ func (bus *Bus) Read32(address uint32) uint32 {
 
 	if bus.Ram.Contains(address) {
 		return bus.Ram.Read32(address)
+	}
+
+	if bus.ScratchPad.Contains(address) {
+		return bus.ScratchPad.Read32(address)
 	}
 
 	if bus.SPU.Contains(address) {
@@ -281,6 +287,11 @@ func (bus *Bus) Write16(address uint32, data uint16) {
 
 func (bus *Bus) Write32(address uint32, data uint32) {
 	address &= CPUAddressMask(address >> 29)
+
+	if bus.ScratchPad.Contains(address) {
+		bus.ScratchPad.Write32(address, data)
+		return
+	}
 
 	if bus.MemoryControl1.Contains(address) {
 		bus.MemoryControl1.Write32(address, data)
