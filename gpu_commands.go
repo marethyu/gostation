@@ -169,15 +169,39 @@ func (gpu *GPU) GP0DoTransferFromVRAM() {
 }
 
 func (gpu *GPU) GP0FillVRam() {
-	// TODO
-	/*
-		x := gpu.fifo.buffer[1] & 0xffff
-		y := gpu.fifo.buffer[1] >> 16
+	var colour uint32 = 0
 
-		resolution := gpu.fifo.buffer[2]
-		width := resolution & 0xffff
-		height := resolution >> 16
-	*/
+	r := uint8(GetRange(gpu.fifo.buffer[0], 0, 8))
+	g := uint8(GetRange(gpu.fifo.buffer[0], 8, 8))
+	b := uint8(GetRange(gpu.fifo.buffer[0], 16, 8))
+
+	PackRange(&colour, 0, uint32(r>>3), 5)
+	PackRange(&colour, 5, uint32(g>>3), 5)
+	PackRange(&colour, 10, uint32(b>>3), 5)
+
+	x := gpu.fifo.buffer[1] & 0xffff
+	y := gpu.fifo.buffer[1] >> 16
+
+	resolution := gpu.fifo.buffer[2]
+	w := resolution & 0xffff
+	h := resolution >> 16
+
+	// position and dimensions must be within vram boundaries; also x and width are in 16-pixel (32-bytes) units (steps of 10h)
+	startX := uint16(x & 0x3f0)
+	startY := uint16(y & 0x1ff)
+
+	width := uint16(w & 0x3f0)
+	height := uint16(h & 0x1ff)
+
+	for y := uint16(0); y < height; y += 1 {
+		for x := uint16(0); x < width; x += 1 {
+			xpos := uint32(startX + x)
+			ypos := uint32(startY + y)
+
+			gpu.vram.Write16(xpos, ypos, uint16(colour))
+		}
+	}
+
 	gpu.fifo.Done()
 	gpu.mode = MODE_NORMAL
 }

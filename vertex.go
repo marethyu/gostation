@@ -18,10 +18,10 @@ func NewVertex(rawPoint uint32, rawColour uint32, rawUV uint32) *Vertex {
 	return &Vertex{
 		int16(ForceSignExtension16(uint16(rawPoint&0xffff), 11)),
 		int16(ForceSignExtension16(uint16(rawPoint>>16), 11)),
-		uint8(rawColour & 0xff),
-		uint8((rawColour >> 8) & 0xff),
-		uint8((rawColour >> 16) & 0xff),
-		uint8(rawUV & 0xff),
-		uint8((rawUV >> 8) & 0xff),
+		uint8(GetRange(rawColour, 0, 8)),
+		uint8(GetRange(rawColour, 8, 8)),
+		uint8(GetRange(rawColour, 16, 8)),
+		uint8(GetRange(rawUV, 0, 8)),
+		uint8(GetRange(rawUV, 8, 8)),
 	}
 }

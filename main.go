@@ -40,8 +40,8 @@ func run() int {
 
 	gopsx := NewGoStation("roms/SCPH1001.BIN")
 	// gopsx.LoadExecutable("roms/tests/psxtest_cpu/psxtest_cpu.exe")
-	gopsx.LoadExecutable("roms/tests/PSX/HelloWorld/16BPP/HelloWorld16BPP.exe")
-	// gopsx.LoadExecutable("roms/tests/PSX/CPUTest/CPU/ADD/CPUADD.exe")
+	// gopsx.LoadExecutable("roms/tests/PSX/HelloWorld/16BPP/HelloWorld16BPP.exe")
+	gopsx.LoadExecutable("roms/tests/PSX/CPUTest/CPU/ADD/CPUADD.exe")
 	// gopsx.LoadExecutable("roms/tests/PSX/ImageLoad/ImageLoad.exe")
 
 	var event sdl.Event
