@@ -70,3 +70,19 @@ func MaxOf(vars ...int16) int16 {
 
 	return max
 }
+
+func Clamp255(v uint16) uint8 {
+	if v > 255 {
+		return 255
+	}
+
+	return uint8(v)
+}
+
+func Clamp0(v uint16) uint8 {
+	if v < 0 {
+		return 0
+	}
+
+	return uint8(v)
+}

@@ -16,10 +16,11 @@ TODO:
 - instruction caching
 - start implementing GTE
 - more GPU commands and other obscure GPU stuff
-- optimize software renderer
+- optimize software renderer (the current implementation is grossly inefficient 🤮🤮)
   * improve performance of triangle rendering algorithm
   * use fixed point arithmetic
   * run renderer in a different thread?
+  * many other things
 - boot Crash Bandicoot
 - TTY debug output
 - web server for debugging

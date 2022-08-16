@@ -10,6 +10,13 @@ const (
 )
 
 const (
+	SEMI_TRANSPARENT_MODE0 = iota /* B/2+F/2 */
+	SEMI_TRANSPARENT_MODE1        /* B+F */
+	SEMI_TRANSPARENT_MODE2        /* B-F */
+	SEMI_TRANSPARENT_MODE3        /* B+F/4 */
+)
+
+const (
 	TEXTURE_FORMAT_4b = iota
 	TEXTURE_FORMAT_8b
 	TEXTURE_FORMAT_15b

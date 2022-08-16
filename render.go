@@ -31,15 +31,25 @@ func (gpu *GPU) DoRenderPolygon() {
 		gpu.RenderMonochromeTrig()
 	case 0b10000:
 		gpu.RenderTrigGouraud()
+	case 0b00010:
+		gpu.RenderSemitransparentTrig()
+	case 0b10010:
+		gpu.RenderSemitransparentTrigGouraud()
 	case 0b01000:
 		gpu.RenderMonochromeQuad()
 	case 0b11000:
 		gpu.RenderQuadGouraud()
+	case 0b01010:
+		gpu.RenderSemitransparentQuad()
+	case 0b11010:
+		gpu.RenderSemitransparentQuadGouraud()
 	case 0b01100:
 		gpu.RenderTexturedQuadWithBlending()
 	default:
 		panic(fmt.Sprintf("[GPU::DoRenderPolygon] Unknown attribute: %05b\n", gpu.shape_attr))
 	}
+
+	gpu.vram.Flush()
 }
 
 func (gpu *GPU) RenderMonochromeTrig() {
@@ -60,6 +70,34 @@ func (gpu *GPU) RenderTrigGouraud() {
 
 	// make sure that vertexes are in clockwise order
 	gpu.Triangle(v1, v2, v3, 0, 0, 0, 0, 0, 0)
+}
+
+func (gpu *GPU) RenderSemitransparentTrig() {
+	colour := gpu.fifo.buffer[0]
+
+	v1 := NewVertex(gpu.fifo.buffer[1], colour, 0)
+	v2 := NewVertex(gpu.fifo.buffer[2], colour, 0)
+	v3 := NewVertex(gpu.fifo.buffer[3], colour, 0)
+
+	var mask uint32 = 0
+
+	ModifyBit(&mask, SEMI_TRANSPARENT, true)
+
+	// make sure that vertexes are in clockwise order
+	gpu.Triangle(v1, v2, v3, 0, 0, 0, 0, 0, mask)
+}
+
+func (gpu *GPU) RenderSemitransparentTrigGouraud() {
+	v1 := NewVertex(gpu.fifo.buffer[1], gpu.fifo.buffer[0], 0)
+	v2 := NewVertex(gpu.fifo.buffer[3], gpu.fifo.buffer[2], 0)
+	v3 := NewVertex(gpu.fifo.buffer[5], gpu.fifo.buffer[4], 0)
+
+	var mask uint32 = 0
+
+	ModifyBit(&mask, SEMI_TRANSPARENT, true)
+
+	// make sure that vertexes are in clockwise order
+	gpu.Triangle(v1, v2, v3, 0, 0, 0, 0, 0, mask)
 }
 
 func (gpu *GPU) RenderMonochromeQuad() {
@@ -84,6 +122,38 @@ func (gpu *GPU) RenderQuadGouraud() {
 	// make sure that vertexes are in clockwise order
 	gpu.Triangle(v1, v2, v3, 0, 0, 0, 0, 0, 0)
 	gpu.Triangle(v2, v4, v3, 0, 0, 0, 0, 0, 0)
+}
+
+func (gpu *GPU) RenderSemitransparentQuad() {
+	colour := gpu.fifo.buffer[0]
+
+	v1 := NewVertex(gpu.fifo.buffer[1], colour, 0)
+	v2 := NewVertex(gpu.fifo.buffer[2], colour, 0)
+	v3 := NewVertex(gpu.fifo.buffer[3], colour, 0)
+	v4 := NewVertex(gpu.fifo.buffer[4], colour, 0)
+
+	var mask uint32 = 0
+
+	ModifyBit(&mask, SEMI_TRANSPARENT, true)
+
+	// make sure that vertexes are in clockwise order
+	gpu.Triangle(v1, v2, v3, 0, 0, 0, 0, 0, mask)
+	gpu.Triangle(v2, v4, v3, 0, 0, 0, 0, 0, mask)
+}
+
+func (gpu *GPU) RenderSemitransparentQuadGouraud() {
+	v1 := NewVertex(gpu.fifo.buffer[1], gpu.fifo.buffer[0], 0)
+	v2 := NewVertex(gpu.fifo.buffer[3], gpu.fifo.buffer[2], 0)
+	v3 := NewVertex(gpu.fifo.buffer[5], gpu.fifo.buffer[4], 0)
+	v4 := NewVertex(gpu.fifo.buffer[7], gpu.fifo.buffer[6], 0)
+
+	var mask uint32 = 0
+
+	ModifyBit(&mask, SEMI_TRANSPARENT, true)
+
+	// make sure that vertexes are in clockwise order
+	gpu.Triangle(v1, v2, v3, 0, 0, 0, 0, 0, mask)
+	gpu.Triangle(v2, v4, v3, 0, 0, 0, 0, 0, mask)
 }
 
 /*
@@ -136,7 +206,7 @@ func (gpu *GPU) RenderTexturedQuadWithBlending() {
 	texFormat := GetRange(texPage, 7, 2)
 
 	if texFormat == TEXTURE_FORMAT_reserved {
-		panic("[GPU::TexturedQuad] reserved texture format")
+		panic("[GPU::RenderTexturedQuadWithBlending] reserved texture format")
 	}
 
 	var mask uint32 = 0
@@ -155,7 +225,7 @@ Resources to learn more about textures:
 - https://www.reddit.com/r/EmuDev/comments/fmhtcn/article_the_ps1_gpu_texture_pipeline_and_how_to/
 - gpu section in https://web.archive.org/web/20190713020355/http://www.elisanet.fi/6581/PSX/doc/Playstation_Hardware.pdf
 */
-func (gpu *GPU) Triangle(v1, v2, v3 *Vertex, clutX uint32, clutY uint32, texPageUBase uint32, texPageVBase uint32, texFormat uint32, mask uint32) {
+func (gpu *GPU) Triangle(v1, v2, v3 *Vertex, clutX uint32, clutY uint32, texPageUBase uint32, texPageVBase uint32, texFormat uint32, settings uint32) {
 	// Area of the parallelogram formed by edge vectors
 	area := float32(int32(v3.x-v1.x)*int32(v2.y-v1.y) - int32(v3.y-v1.y)*int32(v2.x-v1.x))
 
@@ -179,7 +249,7 @@ func (gpu *GPU) Triangle(v1, v2, v3 *Vertex, clutX uint32, clutY uint32, texPage
 				g := uint8(w1*float32(v1.g) + w2*float32(v2.g) + w3*float32(v3.g))
 				b := uint8(w1*float32(v1.b) + w2*float32(v2.b) + w3*float32(v3.b))
 
-				if TestBit(mask, TEXTURED) {
+				if TestBit(settings, TEXTURED) {
 					u := uint32(uint8(w1*float32(v1.u) + w2*float32(v2.u) + w3*float32(v3.u)))
 					v := uint32(uint8(w1*float32(v1.v) + w2*float32(v2.v) + w3*float32(v3.v)))
 
@@ -200,23 +270,55 @@ func (gpu *GPU) Triangle(v1, v2, v3 *Vertex, clutX uint32, clutY uint32, texPage
 
 					// don't draw black texels
 					if texel > 0 {
-						if TestBit(mask, TEXTURE_RAW) {
-							gpu.vram.Write16(uint32(x), uint32(y), texel)
-						} else { /* texture blend */
-							tr := uint8(GetRange(uint32(texel), 0, 5) << 3)
-							tg := uint8(GetRange(uint32(texel), 5, 5) << 3)
-							tb := uint8(GetRange(uint32(texel), 10, 5) << 3)
+						tr := uint8(GetRange(uint32(texel), 0, 5) << 3)
+						tg := uint8(GetRange(uint32(texel), 5, 5) << 3)
+						tb := uint8(GetRange(uint32(texel), 10, 5) << 3)
 
+						if TestBit(settings, TEXTURE_RAW) {
+							gpu.Pixel(uint32(x), uint32(y), tr, tg, tb, TestBit(uint32(texel), 15))
+						} else { /* texture blend */
 							// adjust brightness of each texel (neutral value is 128)
-							finalR := uint8((uint16(r) * uint16(tr)) >> 7) // shift by 7 is same as dividing by 128
-							finalG := uint8((uint16(g) * uint16(tg)) >> 7)
-							finalB := uint8((uint16(b) * uint16(tb)) >> 7)
+							finalR := Clamp255((uint16(r) * uint16(tr)) >> 7) // shift by 7 is same as dividing by 128
+							finalG := Clamp255((uint16(g) * uint16(tg)) >> 7)
+							finalB := Clamp255((uint16(b) * uint16(tb)) >> 7)
 
 							gpu.Pixel(uint32(x), uint32(y), finalR, finalG, finalB, TestBit(uint32(texel), 15))
 						}
 					}
 				} else {
-					gpu.Pixel(uint32(x), uint32(y), r, g, b, false)
+					if TestBit(settings, SEMI_TRANSPARENT) {
+						// see semi-transparency section in http://hitmen.c02.at/files/docs/psx/gpu.txt
+
+						backp := gpu.vram.Read16(uint32(x), uint32(y))
+
+						br := uint8(GetRange(uint32(backp), 0, 5) << 3)
+						bg := uint8(GetRange(uint32(backp), 5, 5) << 3)
+						bb := uint8(GetRange(uint32(backp), 10, 5) << 3)
+
+						var finalR, finalG, finalB uint8
+						switch gpu.semiTransparency {
+						case SEMI_TRANSPARENT_MODE0:
+							finalR = uint8((uint16(br) + uint16(r)) >> 1)
+							finalG = uint8((uint16(bg) + uint16(g)) >> 1)
+							finalB = uint8((uint16(bb) + uint16(b)) >> 1)
+						case SEMI_TRANSPARENT_MODE1:
+							finalR = Clamp255(uint16(br) + uint16(r))
+							finalG = Clamp255(uint16(bg) + uint16(g))
+							finalB = Clamp255(uint16(bb) + uint16(b))
+						case SEMI_TRANSPARENT_MODE2:
+							finalR = Clamp0(uint16(br) - uint16(r))
+							finalG = Clamp0(uint16(bg) - uint16(g))
+							finalB = Clamp0(uint16(bb) - uint16(b))
+						case SEMI_TRANSPARENT_MODE3:
+							finalR = Clamp255(uint16(br) + (uint16(r) >> 2))
+							finalG = Clamp255(uint16(bg) + (uint16(g) >> 2))
+							finalB = Clamp255(uint16(bb) + (uint16(b) >> 2))
+						}
+
+						gpu.Pixel(uint32(x), uint32(y), finalR, finalG, finalB, false)
+					} else {
+						gpu.Pixel(uint32(x), uint32(y), r, g, b, false)
+					}
 				}
 			}
 		}
@@ -229,7 +331,20 @@ func (gpu *GPU) Pixel(x uint32, y uint32, r, g, b uint8, m bool) {
 	PackRange(&colour, 0, uint32(r>>3), 5)
 	PackRange(&colour, 5, uint32(g>>3), 5)
 	PackRange(&colour, 10, uint32(b>>3), 5)
-	ModifyBit(&colour, 15, m)
+	ModifyBit(&colour, 15, gpu.setMaskBit || m)
 
-	gpu.vram.Write16(x, y, uint16(colour))
+	var draw bool = true
+
+	if gpu.drawUnmaskedPixels {
+		pix := uint32(gpu.vram.Read16(x, y))
+
+		if TestBit(pix, 15) {
+			// oops... masked
+			draw = false
+		}
+	}
+
+	if draw {
+		gpu.vram.Write16(x, y, uint16(colour))
+	}
 }

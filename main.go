@@ -43,6 +43,7 @@ func run() int {
 	// gopsx.LoadExecutable("roms/tests/PSX/HelloWorld/16BPP/HelloWorld16BPP.exe")
 	// gopsx.LoadExecutable("roms/tests/PSX/GPU/16BPP/RenderTexturePolygon/CLUT4BPP/RenderTexturePolygonCLUT4BPP.exe")
 	// gopsx.LoadExecutable("roms/tests/PSX/ImageLoad/ImageLoad.exe")
+	gopsx.LoadExecutable("roms/tests/PSX/GPU/16BPP/RenderPolygon/RenderPolygon16BPP.exe")
 
 	var event sdl.Event
 	var running bool = true
