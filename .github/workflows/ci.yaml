@@ -1,0 +1,7 @@
+name: Replace all tabs with spaces
+on: [push]
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: find . -maxdepth 1 -name \*.go -type f -exec sed -i 's/\t/    /g' {} +
