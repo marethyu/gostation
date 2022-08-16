@@ -8,6 +8,12 @@ const (
 	SHAPE_POLYGON = iota
 )
 
+const (
+	TEXTURED = iota
+	TEXTURE_RAW
+	SEMI_TRANSPARENT /* TODO */
+)
+
 /*
 1--2    Note: A 4 point polygon is processed internally as two 3 point
 |  |    polygons.
@@ -30,7 +36,7 @@ func (gpu *GPU) DoRenderPolygon() {
 	case 0b11000:
 		gpu.RenderQuadGouraud()
 	case 0b01100:
-		gpu.RenderTexturedQuad()
+		gpu.RenderTexturedQuadWithBlending()
 	default:
 		panic(fmt.Sprintf("[GPU::DoRenderPolygon] Unknown attribute: %05b\n", gpu.shape_attr))
 	}
@@ -44,7 +50,7 @@ func (gpu *GPU) RenderMonochromeTrig() {
 	v3 := NewVertex(gpu.fifo.buffer[3], colour, 0)
 
 	// make sure that vertexes are in clockwise order
-	gpu.ShadedTriangle(v1, v2, v3)
+	gpu.Triangle(v1, v2, v3, 0, 0, 0, 0, 0, 0)
 }
 
 func (gpu *GPU) RenderTrigGouraud() {
@@ -53,7 +59,7 @@ func (gpu *GPU) RenderTrigGouraud() {
 	v3 := NewVertex(gpu.fifo.buffer[5], gpu.fifo.buffer[4], 0)
 
 	// make sure that vertexes are in clockwise order
-	gpu.ShadedTriangle(v1, v2, v3)
+	gpu.Triangle(v1, v2, v3, 0, 0, 0, 0, 0, 0)
 }
 
 func (gpu *GPU) RenderMonochromeQuad() {
@@ -65,8 +71,8 @@ func (gpu *GPU) RenderMonochromeQuad() {
 	v4 := NewVertex(gpu.fifo.buffer[4], colour, 0)
 
 	// make sure that vertexes are in clockwise order
-	gpu.ShadedTriangle(v1, v2, v3)
-	gpu.ShadedTriangle(v2, v4, v3)
+	gpu.Triangle(v1, v2, v3, 0, 0, 0, 0, 0, 0)
+	gpu.Triangle(v2, v4, v3, 0, 0, 0, 0, 0, 0)
 }
 
 func (gpu *GPU) RenderQuadGouraud() {
@@ -76,8 +82,8 @@ func (gpu *GPU) RenderQuadGouraud() {
 	v4 := NewVertex(gpu.fifo.buffer[7], gpu.fifo.buffer[6], 0)
 
 	// make sure that vertexes are in clockwise order
-	gpu.ShadedTriangle(v1, v2, v3)
-	gpu.ShadedTriangle(v2, v4, v3)
+	gpu.Triangle(v1, v2, v3, 0, 0, 0, 0, 0, 0)
+	gpu.Triangle(v2, v4, v3, 0, 0, 0, 0, 0, 0)
 }
 
 /*
@@ -110,7 +116,7 @@ Format for the 16 bit 'Page':
 	12-13  Unused (does NOT change GP0(E1h).Bit12-13)
 	14-15  Unused (should be 0)
 */
-func (gpu *GPU) RenderTexturedQuad() {
+func (gpu *GPU) RenderTexturedQuadWithBlending() {
 	colour := gpu.fifo.buffer[0]
 
 	v1 := NewVertex(gpu.fifo.buffer[1], colour, gpu.fifo.buffer[2])
@@ -133,13 +139,23 @@ func (gpu *GPU) RenderTexturedQuad() {
 		panic("[GPU::TexturedQuad] reserved texture format")
 	}
 
+	var mask uint32 = 0
+
+	ModifyBit(&mask, TEXTURED, true)
+	ModifyBit(&mask, TEXTURE_RAW, false)
+
 	// make sure that vertexes are in clockwise order
-	gpu.TexturedTriangle(v1, v2, v3, clutX, clutY, texPageUBase, texPageVBase, texFormat)
-	gpu.TexturedTriangle(v2, v4, v3, clutX, clutY, texPageUBase, texPageVBase, texFormat)
+	gpu.Triangle(v1, v2, v3, clutX, clutY, texPageUBase, texPageVBase, texFormat, mask)
+	gpu.Triangle(v2, v4, v3, clutX, clutY, texPageUBase, texPageVBase, texFormat, mask)
 }
 
-/* lol self plagiarised from https://github.com/marethyu/mgl/blob/main/mygl.h#L133 */
-func (gpu *GPU) ShadedTriangle(v1, v2, v3 *Vertex) {
+/*
+Resources to learn more about textures:
+- texture section in http://hitmen.c02.at/files/docs/psx/gpu.txt
+- https://www.reddit.com/r/EmuDev/comments/fmhtcn/article_the_ps1_gpu_texture_pipeline_and_how_to/
+- gpu section in https://web.archive.org/web/20190713020355/http://www.elisanet.fi/6581/PSX/doc/Playstation_Hardware.pdf
+*/
+func (gpu *GPU) Triangle(v1, v2, v3 *Vertex, clutX uint32, clutY uint32, texPageUBase uint32, texPageVBase uint32, texFormat uint32, mask uint32) {
 	// Area of the parallelogram formed by edge vectors
 	area := float32(int32(v3.x-v1.x)*int32(v2.y-v1.y) - int32(v3.y-v1.y)*int32(v2.x-v1.x))
 
@@ -163,76 +179,57 @@ func (gpu *GPU) ShadedTriangle(v1, v2, v3 *Vertex) {
 				g := uint8(w1*float32(v1.g) + w2*float32(v2.g) + w3*float32(v3.g))
 				b := uint8(w1*float32(v1.b) + w2*float32(v2.b) + w3*float32(v3.b))
 
-				gpu.Pixel(uint32(x), uint32(y), r, g, b)
-			}
-		}
-	}
-}
+				if TestBit(mask, TEXTURED) {
+					u := uint32(uint8(w1*float32(v1.u) + w2*float32(v2.u) + w3*float32(v3.u)))
+					v := uint32(uint8(w1*float32(v1.v) + w2*float32(v2.v) + w3*float32(v3.v)))
 
-/*
-Resources to learn more about textures:
-- texture section in http://hitmen.c02.at/files/docs/psx/gpu.txt
-- https://www.reddit.com/r/EmuDev/comments/fmhtcn/article_the_ps1_gpu_texture_pipeline_and_how_to/
-- gpu section in https://web.archive.org/web/20190713020355/http://www.elisanet.fi/6581/PSX/doc/Playstation_Hardware.pdf
-*/
-func (gpu *GPU) TexturedTriangle(v1, v2, v3 *Vertex, clutX uint32, clutY uint32, texPageUBase uint32, texPageVBase uint32, texFormat uint32) {
-	// Area of the parallelogram formed by edge vectors
-	area := float32(int32(v3.x-v1.x)*int32(v2.y-v1.y) - int32(v3.y-v1.y)*int32(v2.x-v1.x))
+					var texel uint16
 
-	// top left and bottom right points of a bounding box (-1 bc bottom and right edges are not drawn)
-	xmin := MinOf(v1.x, v2.x, v3.x)
-	xmax := MaxOf(v1.x, v2.x, v3.x) - 1
-	ymin := MinOf(v1.y, v2.y, v3.y)
-	ymax := MaxOf(v1.y, v2.y, v3.y) - 1
+					switch texFormat {
+					case TEXTURE_FORMAT_4b:
+						texel16 := gpu.vram.Read16(texPageUBase+u/4, texPageVBase+v)
+						index := uint32((texel16 >> ((u % 4) * 4)) & 0xf)
+						texel = gpu.vram.Read16(clutX+index, clutY)
+					case TEXTURE_FORMAT_8b:
+						texel16 := gpu.vram.Read16(texPageUBase+u/2, texPageVBase+v)
+						index := uint32((texel16 >> ((u % 2) * 8)) & 0xff)
+						texel = gpu.vram.Read16(clutX+index, clutY)
+					case TEXTURE_FORMAT_15b:
+						texel = gpu.vram.Read16(texPageUBase+u, texPageVBase+v)
+					}
 
-	// TODO clipping
+					// don't draw black texels
+					if texel > 0 {
+						if TestBit(mask, TEXTURE_RAW) {
+							gpu.vram.Write16(uint32(x), uint32(y), texel)
+						} else { /* texture blend */
+							tr := uint8(GetRange(uint32(texel), 0, 5) << 3)
+							tg := uint8(GetRange(uint32(texel), 5, 5) << 3)
+							tb := uint8(GetRange(uint32(texel), 10, 5) << 3)
 
-	for y := ymin; y <= ymax; y += 1 {
-		for x := xmin; x <= xmax; x += 1 {
-			// Barycentric weights
-			w1 := float32(int32(x-v2.x)*int32(v3.y-v2.y)-int32(y-v2.y)*int32(v3.x-v2.x)) / area
-			w2 := float32(int32(x-v3.x)*int32(v1.y-v3.y)-int32(y-v3.y)*int32(v1.x-v3.x)) / area
-			w3 := float32(int32(x-v1.x)*int32(v2.y-v1.y)-int32(y-v1.y)*int32(v2.x-v1.x)) / area
+							// adjust brightness of each texel (neutral value is 128)
+							finalR := uint8((uint16(r) * uint16(tr)) >> 7) // shift by 7 is same as dividing by 128
+							finalG := uint8((uint16(g) * uint16(tg)) >> 7)
+							finalB := uint8((uint16(b) * uint16(tb)) >> 7)
 
-			if (w1 >= 0.0) && (w2 >= 0.0) && (w3 >= 0.0) {
-				u := uint32(uint8(w1*float32(v1.u) + w2*float32(v2.u) + w3*float32(v3.u)))
-				v := uint32(uint8(w1*float32(v1.v) + w2*float32(v2.v) + w3*float32(v3.v)))
-
-				var texel uint16
-
-				switch texFormat {
-				case TEXTURE_FORMAT_4b:
-					texel16 := gpu.vram.Read16(texPageUBase+u/4, texPageVBase+v)
-					index := uint32((texel16 >> ((u % 4) * 4)) & 0xf)
-					texel = gpu.vram.Read16(clutX+index, clutY)
-				case TEXTURE_FORMAT_8b:
-					texel16 := gpu.vram.Read16(texPageUBase+u/2, texPageVBase+v)
-					index := uint32((texel16 >> ((u % 2) * 8)) & 0xff)
-					texel = gpu.vram.Read16(clutX+index, clutY)
-				case TEXTURE_FORMAT_15b:
-					texel = gpu.vram.Read16(texPageUBase+u, texPageVBase+v)
-				}
-
-				// don't draw black texels
-				if texel > 0 {
-					// r := uint8(GetRange(uint32(texel), 0, 5) << 3)
-					// g := uint8(GetRange(uint32(texel), 5, 5) << 3)
-					// b := uint8(GetRange(uint32(texel), 10, 5) << 3)
-					// gpu.Pixel(uint32(x), uint32(y), r, g, b)
-
-					gpu.vram.Write16(uint32(x), uint32(y), uint16(texel))
+							gpu.Pixel(uint32(x), uint32(y), finalR, finalG, finalB, TestBit(uint32(texel), 15))
+						}
+					}
+				} else {
+					gpu.Pixel(uint32(x), uint32(y), r, g, b, false)
 				}
 			}
 		}
 	}
 }
 
-func (gpu *GPU) Pixel(x uint32, y uint32, r, g, b uint8) {
+func (gpu *GPU) Pixel(x uint32, y uint32, r, g, b uint8, m bool) {
 	var colour uint32 = 0
 
 	PackRange(&colour, 0, uint32(r>>3), 5)
 	PackRange(&colour, 5, uint32(g>>3), 5)
 	PackRange(&colour, 10, uint32(b>>3), 5)
+	ModifyBit(&colour, 15, m)
 
 	gpu.vram.Write16(x, y, uint16(colour))
 }

@@ -396,7 +396,7 @@ Format for polygon command:
 	   27         1/0    4 / 3 vertices
 	   26         1/0    textured / untextured
 	   25         1/0    semi transparent / solid
-	   24         1/0    texture blending
+	   24         1/0    raw texture / texture blending
 	  23-0        rgb    first color value.
 */
 func (gpu *GPU) InitRenderPolygonCommand(cmd uint32) {
