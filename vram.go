@@ -16,12 +16,10 @@ desc.|M |Blue          |Green         |Red           |
 */
 type VRAM struct {
 	buffer [VRAM_SIZE]uint16
-	tmp    [VRAM_SIZE]uint16
 }
 
 func NewVRAM() *VRAM {
 	return &VRAM{
-		[VRAM_SIZE]uint16{},
 		[VRAM_SIZE]uint16{},
 	}
 }
@@ -32,9 +30,5 @@ func (vram *VRAM) Read16(x uint32, y uint32) uint16 {
 
 /* TODO 4 and 8 bit mode writes? */
 func (vram *VRAM) Write16(x uint32, y uint32, data uint16) {
-	vram.tmp[y*VRAM_WIDTH+x] = data
-}
-
-func (vram *VRAM) Flush() {
-	vram.buffer = vram.tmp
+	vram.buffer[y*VRAM_WIDTH+x] = data
 }

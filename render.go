@@ -48,8 +48,6 @@ func (gpu *GPU) DoRenderPolygon() {
 	default:
 		panic(fmt.Sprintf("[GPU::DoRenderPolygon] Unknown attribute: %05b\n", gpu.shape_attr))
 	}
-
-	gpu.vram.Flush()
 }
 
 func (gpu *GPU) RenderMonochromeTrig() {
@@ -229,11 +227,15 @@ func (gpu *GPU) Triangle(v1, v2, v3 *Vertex, clutX uint32, clutY uint32, texPage
 	// Area of the parallelogram formed by edge vectors
 	area := float32(int32(v3.x-v1.x)*int32(v2.y-v1.y) - int32(v3.y-v1.y)*int32(v2.x-v1.x))
 
-	// top left and bottom right points of a bounding box (-1 bc bottom and right edges are not drawn)
 	xmin := MinOf(v1.x, v2.x, v3.x)
-	xmax := MaxOf(v1.x, v2.x, v3.x) - 1
+	xmax := MaxOf(v1.x, v2.x, v3.x)
 	ymin := MinOf(v1.y, v2.y, v3.y)
-	ymax := MaxOf(v1.y, v2.y, v3.y) - 1
+	ymax := MaxOf(v1.y, v2.y, v3.y)
+
+	// are edges top left?
+	topleft12 := (v1.y == v2.y && v1.x < v2.x) || (v1.y > v2.y) // v1-v2 edge
+	topleft23 := (v2.y == v3.y && v2.x < v3.x) || (v2.y > v3.y) // v2-v3 edge
+	topleft31 := (v3.y == v1.y && v3.x < v1.x) || (v3.y > v1.y) // v3-v1 edge
 
 	// TODO clipping
 
@@ -244,7 +246,10 @@ func (gpu *GPU) Triangle(v1, v2, v3 *Vertex, clutX uint32, clutY uint32, texPage
 			w2 := float32(int32(x-v3.x)*int32(v1.y-v3.y)-int32(y-v3.y)*int32(v1.x-v3.x)) / area
 			w3 := float32(int32(x-v1.x)*int32(v2.y-v1.y)-int32(y-v1.y)*int32(v2.x-v1.x)) / area
 
-			if (w1 >= 0.0) && (w2 >= 0.0) && (w3 >= 0.0) {
+			// TODO comparing against floats are bad...
+			if (w1 > 0.0 || (w1 == 0.0 && topleft23)) &&
+				(w2 > 0.0 || (w2 == 0.0 && topleft31)) &&
+				(w3 > 0.0 || (w3 == 0.0 && topleft12)) {
 				r := uint8(w1*float32(v1.r) + w2*float32(v2.r) + w3*float32(v3.r))
 				g := uint8(w1*float32(v1.g) + w2*float32(v2.g) + w3*float32(v3.g))
 				b := uint8(w1*float32(v1.b) + w2*float32(v2.b) + w3*float32(v3.b))
