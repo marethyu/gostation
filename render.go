@@ -341,6 +341,8 @@ func (gpu *GPU) Triangle(v1, v2, v3 *Vertex, clutX, clutY, texPageUBase, texPage
 						tg := int(GetRange(uint32(texel), 5, 5) << 3)
 						tb := int(GetRange(uint32(texel), 10, 5) << 3)
 
+						// TODO texture masking?
+
 						if TestBit(settings, TEXTURE_RAW) {
 							gpu.Pixel(x, y, tr, tg, tb, TestBit(uint32(texel), 15))
 						} else { /* texture blend */
