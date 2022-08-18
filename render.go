@@ -317,52 +317,51 @@ func (gpu *GPU) Triangle(v1, v2, v3 *Vertex, clutX, clutY, texPageUBase, texPage
 				b := (w1*v1.b + w2*v2.b + w3*v3.b) / area
 
 				if TestBit(settings, TEXTURED) {
-					u := int((w1*v1.u + w2*v2.u + w3*v3.u) / area)
-					v := int((w1*v1.v + w2*v2.v + w3*v3.v) / area)
+					u := (w1*v1.u + w2*v2.u + w3*v3.u) / area
+					v := (w1*v1.v + w2*v2.v + w3*v3.v) / area
 
-					var texel uint16
-
+					var texel uint32
 					switch texFormat {
 					case TEXTURE_FORMAT_4b:
 						texel16 := gpu.vram.Read16(texPageUBase+u/4, texPageVBase+v)
 						index := int((texel16 >> ((u % 4) * 4)) & 0xf)
-						texel = gpu.vram.Read16(clutX+index, clutY)
+						texel = uint32(gpu.vram.Read16(clutX+index, clutY))
 					case TEXTURE_FORMAT_8b:
 						texel16 := gpu.vram.Read16(texPageUBase+u/2, texPageVBase+v)
 						index := int((texel16 >> ((u % 2) * 8)) & 0xff)
-						texel = gpu.vram.Read16(clutX+index, clutY)
+						texel = uint32(gpu.vram.Read16(clutX+index, clutY))
 					case TEXTURE_FORMAT_15b:
-						texel = gpu.vram.Read16(texPageUBase+u, texPageVBase+v)
+						texel = uint32(gpu.vram.Read16(texPageUBase+u, texPageVBase+v))
 					}
 
 					// don't draw black texels
 					if texel > 0 {
-						tr := int(GetRange(uint32(texel), 0, 5) << 3)
-						tg := int(GetRange(uint32(texel), 5, 5) << 3)
-						tb := int(GetRange(uint32(texel), 10, 5) << 3)
+						tr := int(GetRange(texel, 0, 5) << 3)
+						tg := int(GetRange(texel, 5, 5) << 3)
+						tb := int(GetRange(texel, 10, 5) << 3)
 
 						// TODO texture masking?
 
 						if TestBit(settings, TEXTURE_RAW) {
-							gpu.Pixel(x, y, tr, tg, tb, TestBit(uint32(texel), 15))
+							gpu.Pixel(x, y, tr, tg, tb, TestBit(texel, 15))
 						} else { /* texture blend */
 							// adjust brightness of each texel (neutral value is 128)
 							finalR := Clamp8((r * tr) >> 7) // shift by 7 is same as dividing by 128
 							finalG := Clamp8((g * tg) >> 7)
 							finalB := Clamp8((b * tb) >> 7)
 
-							gpu.Pixel(x, y, finalR, finalG, finalB, TestBit(uint32(texel), 15))
+							gpu.Pixel(x, y, finalR, finalG, finalB, TestBit(texel, 15))
 						}
 					}
 				} else {
 					if TestBit(settings, SEMI_TRANSPARENT) {
 						// see semi-transparency section in http://hitmen.c02.at/files/docs/psx/gpu.txt
 
-						backp := gpu.vram.Read16(x, y)
+						backp := uint32(gpu.vram.Read16(x, y))
 
-						br := int(GetRange(uint32(backp), 0, 5) << 3)
-						bg := int(GetRange(uint32(backp), 5, 5) << 3)
-						bb := int(GetRange(uint32(backp), 10, 5) << 3)
+						br := int(GetRange(backp, 0, 5) << 3)
+						bg := int(GetRange(backp, 5, 5) << 3)
+						bb := int(GetRange(backp, 10, 5) << 3)
 
 						var finalR, finalG, finalB int
 						switch gpu.semiTransparency {
