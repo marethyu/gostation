@@ -47,7 +47,7 @@ func ForceSignExtension16(n uint16, len int) uint16 {
 	return uint16(int16(n<<shift) >> shift)
 }
 
-func MinOf(vars ...int32) int32 {
+func MinOf(vars ...int) int {
 	min := vars[0]
 
 	for _, i := range vars {
@@ -59,7 +59,7 @@ func MinOf(vars ...int32) int32 {
 	return min
 }
 
-func MaxOf(vars ...int32) int32 {
+func MaxOf(vars ...int) int {
 	max := vars[0]
 
 	for _, i := range vars {
@@ -71,7 +71,7 @@ func MaxOf(vars ...int32) int32 {
 	return max
 }
 
-func Clamp8(v int32) uint8 {
+func Clamp8(v int) int {
 	if v > 255 {
 		return 255
 	}
@@ -80,7 +80,7 @@ func Clamp8(v int32) uint8 {
 		return 0
 	}
 
-	return uint8(v)
+	return v
 }
 
 func IsTopLeft(v1, v2 *Vertex) bool {
@@ -89,7 +89,7 @@ func IsTopLeft(v1, v2 *Vertex) bool {
 }
 
 // (x, y) is a test point
-func Edge(x1, y1, x2, y2, x, y int32) int32 {
+func Edge(x1, y1, x2, y2, x, y int) int {
 	// computes a cross product (area of paralleogram) between two vectors: <x-x1,y-y1,0> (edge origin to test point) and <x2-x1,y2-y1,0> (edge)
 	// returns: 0 (on edge), negative (left of edge), positive (right of edge)
 	return (x-x1)*(y2-y1) - (y-y1)*(x2-x1)

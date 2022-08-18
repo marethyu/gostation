@@ -24,11 +24,11 @@ func NewVRAM() *VRAM {
 	}
 }
 
-func (vram *VRAM) Read16(x uint32, y uint32) uint16 {
+func (vram *VRAM) Read16(x int, y int) uint16 {
 	return vram.buffer[y*VRAM_WIDTH+x]
 }
 
 /* TODO 4 and 8 bit mode writes? */
-func (vram *VRAM) Write16(x uint32, y uint32, data uint16) {
+func (vram *VRAM) Write16(x int, y int, data uint16) {
 	vram.buffer[y*VRAM_WIDTH+x] = data
 }

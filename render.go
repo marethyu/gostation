@@ -231,13 +231,13 @@ func (gpu *GPU) RenderTexturedQuadWithBlending() {
 	clutIndex := gpu.fifo.buffer[2] >> 16
 	texPage := gpu.fifo.buffer[4] >> 16
 
-	clutX := GetRange(clutIndex, 0, 6) * 16
-	clutY := GetRange(clutIndex, 6, 9)
+	clutX := int(GetRange(clutIndex, 0, 6) * 16)
+	clutY := int(GetRange(clutIndex, 6, 9))
 
-	texPageUBase := GetRange(texPage, 0, 4) * 64
-	texPageVBase := GetRange(texPage, 4, 1) * 256
+	texPageUBase := int(GetRange(texPage, 0, 4) * 64)
+	texPageVBase := int(GetRange(texPage, 4, 1) * 256)
 
-	texFormat := GetRange(texPage, 7, 2)
+	texFormat := int(GetRange(texPage, 7, 2))
 
 	if texFormat == TEXTURE_FORMAT_reserved {
 		panic("[GPU::RenderTexturedQuadWithBlending] reserved texture format")
@@ -266,7 +266,7 @@ Resources to learn more about textures:
 
 Note: v1, v2, and v3 must be in clockwise order
 */
-func (gpu *GPU) Triangle(v1, v2, v3 *Vertex, clutX uint32, clutY uint32, texPageUBase uint32, texPageVBase uint32, texFormat uint32, settings uint32) {
+func (gpu *GPU) Triangle(v1, v2, v3 *Vertex, clutX, clutY, texPageUBase, texPageVBase, texFormat int, settings uint32) {
 	xmin := MinOf(v1.x, v2.x, v3.x)
 	xmax := MaxOf(v1.x, v2.x, v3.x)
 	ymin := MinOf(v1.y, v2.y, v3.y)
@@ -302,7 +302,7 @@ func (gpu *GPU) Triangle(v1, v2, v3 *Vertex, clutX uint32, clutY uint32, texPage
 
 		for x := xmin; x <= xmax; x += 1 {
 			if gpu.drawUnmaskedPixels {
-				pix := uint32(gpu.vram.Read16(uint32(x), uint32(y)))
+				pix := uint32(gpu.vram.Read16(x, y))
 
 				if TestBit(pix, 15) {
 					continue // masked
@@ -312,24 +312,24 @@ func (gpu *GPU) Triangle(v1, v2, v3 *Vertex, clutX uint32, clutY uint32, texPage
 			if (w1 > 0 || (w1 == 0 && topLeft23)) &&
 				(w2 > 0 || (w2 == 0 && topLeft31)) &&
 				(w3 > 0 || (w3 == 0 && topLeft12)) {
-				r := uint8((w1*v1.r + w2*v2.r + w3*v3.r) / area)
-				g := uint8((w1*v1.g + w2*v2.g + w3*v3.g) / area)
-				b := uint8((w1*v1.b + w2*v2.b + w3*v3.b) / area)
+				r := (w1*v1.r + w2*v2.r + w3*v3.r) / area
+				g := (w1*v1.g + w2*v2.g + w3*v3.g) / area
+				b := (w1*v1.b + w2*v2.b + w3*v3.b) / area
 
 				if TestBit(settings, TEXTURED) {
-					u := uint32(uint8((w1*v1.u + w2*v2.u + w3*v3.u) / area))
-					v := uint32(uint8((w1*v1.v + w2*v2.v + w3*v3.v) / area))
+					u := int((w1*v1.u + w2*v2.u + w3*v3.u) / area)
+					v := int((w1*v1.v + w2*v2.v + w3*v3.v) / area)
 
 					var texel uint16
 
 					switch texFormat {
 					case TEXTURE_FORMAT_4b:
 						texel16 := gpu.vram.Read16(texPageUBase+u/4, texPageVBase+v)
-						index := uint32((texel16 >> ((u % 4) * 4)) & 0xf)
+						index := int((texel16 >> ((u % 4) * 4)) & 0xf)
 						texel = gpu.vram.Read16(clutX+index, clutY)
 					case TEXTURE_FORMAT_8b:
 						texel16 := gpu.vram.Read16(texPageUBase+u/2, texPageVBase+v)
-						index := uint32((texel16 >> ((u % 2) * 8)) & 0xff)
+						index := int((texel16 >> ((u % 2) * 8)) & 0xff)
 						texel = gpu.vram.Read16(clutX+index, clutY)
 					case TEXTURE_FORMAT_15b:
 						texel = gpu.vram.Read16(texPageUBase+u, texPageVBase+v)
@@ -337,54 +337,54 @@ func (gpu *GPU) Triangle(v1, v2, v3 *Vertex, clutX uint32, clutY uint32, texPage
 
 					// don't draw black texels
 					if texel > 0 {
-						tr := uint8(GetRange(uint32(texel), 0, 5) << 3)
-						tg := uint8(GetRange(uint32(texel), 5, 5) << 3)
-						tb := uint8(GetRange(uint32(texel), 10, 5) << 3)
+						tr := int(GetRange(uint32(texel), 0, 5) << 3)
+						tg := int(GetRange(uint32(texel), 5, 5) << 3)
+						tb := int(GetRange(uint32(texel), 10, 5) << 3)
 
 						if TestBit(settings, TEXTURE_RAW) {
-							gpu.Pixel(uint32(x), uint32(y), tr, tg, tb, TestBit(uint32(texel), 15))
+							gpu.Pixel(x, y, tr, tg, tb, TestBit(uint32(texel), 15))
 						} else { /* texture blend */
 							// adjust brightness of each texel (neutral value is 128)
-							finalR := Clamp8((int32(r) * int32(tr)) >> 7) // shift by 7 is same as dividing by 128
-							finalG := Clamp8((int32(g) * int32(tg)) >> 7)
-							finalB := Clamp8((int32(b) * int32(tb)) >> 7)
+							finalR := Clamp8((r * tr) >> 7) // shift by 7 is same as dividing by 128
+							finalG := Clamp8((g * tg) >> 7)
+							finalB := Clamp8((b * tb) >> 7)
 
-							gpu.Pixel(uint32(x), uint32(y), finalR, finalG, finalB, TestBit(uint32(texel), 15))
+							gpu.Pixel(x, y, finalR, finalG, finalB, TestBit(uint32(texel), 15))
 						}
 					}
 				} else {
 					if TestBit(settings, SEMI_TRANSPARENT) {
 						// see semi-transparency section in http://hitmen.c02.at/files/docs/psx/gpu.txt
 
-						backp := gpu.vram.Read16(uint32(x), uint32(y))
+						backp := gpu.vram.Read16(x, y)
 
-						br := uint8(GetRange(uint32(backp), 0, 5) << 3)
-						bg := uint8(GetRange(uint32(backp), 5, 5) << 3)
-						bb := uint8(GetRange(uint32(backp), 10, 5) << 3)
+						br := int(GetRange(uint32(backp), 0, 5) << 3)
+						bg := int(GetRange(uint32(backp), 5, 5) << 3)
+						bb := int(GetRange(uint32(backp), 10, 5) << 3)
 
-						var finalR, finalG, finalB uint8
+						var finalR, finalG, finalB int
 						switch gpu.semiTransparency {
 						case SEMI_TRANSPARENT_MODE0:
-							finalR = uint8((uint16(br) + uint16(r)) >> 1)
-							finalG = uint8((uint16(bg) + uint16(g)) >> 1)
-							finalB = uint8((uint16(bb) + uint16(b)) >> 1)
+							finalR = (br + r) >> 1
+							finalG = (bg + g) >> 1
+							finalB = (bb + b) >> 1
 						case SEMI_TRANSPARENT_MODE1:
-							finalR = Clamp8(int32(br) + int32(r))
-							finalG = Clamp8(int32(bg) + int32(g))
-							finalB = Clamp8(int32(bb) + int32(b))
+							finalR = Clamp8(br + r)
+							finalG = Clamp8(bg + g)
+							finalB = Clamp8(bb + b)
 						case SEMI_TRANSPARENT_MODE2:
-							finalR = Clamp8(int32(br) - int32(r))
-							finalG = Clamp8(int32(bg) - int32(g))
-							finalB = Clamp8(int32(bb) - int32(b))
+							finalR = Clamp8(br - r)
+							finalG = Clamp8(bg - g)
+							finalB = Clamp8(bb - b)
 						case SEMI_TRANSPARENT_MODE3:
-							finalR = Clamp8(int32(br) + (int32(r) >> 2))
-							finalG = Clamp8(int32(bg) + (int32(g) >> 2))
-							finalB = Clamp8(int32(bb) + (int32(b) >> 2))
+							finalR = Clamp8(br + (r >> 2))
+							finalG = Clamp8(bg + (g >> 2))
+							finalB = Clamp8(bb + (b >> 2))
 						}
 
-						gpu.Pixel(uint32(x), uint32(y), finalR, finalG, finalB, false)
+						gpu.Pixel(x, y, finalR, finalG, finalB, false)
 					} else {
-						gpu.Pixel(uint32(x), uint32(y), r, g, b, false)
+						gpu.Pixel(x, y, r, g, b, false)
 					}
 				}
 			}
@@ -400,7 +400,7 @@ func (gpu *GPU) Triangle(v1, v2, v3 *Vertex, clutX uint32, clutY uint32, texPage
 	}
 }
 
-func (gpu *GPU) Pixel(x uint32, y uint32, r, g, b uint8, m bool) {
+func (gpu *GPU) Pixel(x, y, r, g, b int, m bool) {
 	var colour uint32 = 0
 
 	PackRange(&colour, 0, uint32(r>>3), 5)

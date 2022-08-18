@@ -137,13 +137,13 @@ type GPU struct {
 	shape_attr uint8 /* rendering attributes */
 
 	/* for cpu to vram blit */
-	startX    uint32 /* destination x (ie. starting position on vram in this context) */
-	startY    uint32 /* destination y */
-	imgWidth  uint32 /* width of "image" */
-	imgHeight uint32 /* height of "image" */
-	imgX      uint32 /* x coordinate relative to "image" being transferred */
-	imgY      uint32 /* y coordinate relative to "image" being transferred */
-	wordsLeft uint32
+	startX    int /* destination x (ie. starting position on vram in this context) */
+	startY    int /* destination y */
+	imgWidth  int /* width of "image" */
+	imgHeight int /* height of "image" */
+	imgX      int /* x coordinate relative to "image" being transferred */
+	imgY      int /* y coordinate relative to "image" being transferred */
+	wordsLeft int
 }
 
 func NewGPU(core *GoStationCore) *GPU {
