@@ -1,9 +1,5 @@
 package main
 
-import (
-	"fmt"
-)
-
 const (
 	GPU_OFFSET = 0x1f801810
 	GPU_SIZE   = 8
@@ -264,8 +260,8 @@ func (gpu *GPU) GPUSTATUS() uint32 {
 
 func (gpu *GPU) GPUREAD() uint32 {
 	if gpu.mode == MODE_VramtoCPUBlit {
-		lo := uint32(gpu.DoVramToCPUTransfer())
-		hi := uint32(gpu.DoVramToCPUTransfer())
+		lo := uint32(gpu.GP0DoVramToCPUTransfer())
+		hi := uint32(gpu.GP0DoVramToCPUTransfer())
 
 		gpu.wordsLeft -= 1
 
@@ -290,90 +286,6 @@ func (gpu *GPU) Read32(address uint32) uint32 {
 	return 0
 }
 
-/* Nice summary here: https://psx-spx.consoledev.net/graphicsprocessingunitgpu/#gpu-command-summary */
-func (gpu *GPU) WriteGP0(data uint32) {
-	if gpu.fifo.active {
-		gpu.fifo.Push(data)
-
-		if gpu.fifo.done {
-			switch gpu.mode {
-			case MODE_RENDERING:
-				gpu.GP0RenderShape()
-			case MODE_CPUtoVRamBlit:
-				gpu.GP0DoTransferToVRAM()
-			case MODE_VramtoCPUBlit:
-				gpu.GP0DoTransferFromVRAM()
-			case MODE_FillVRam:
-				gpu.GP0FillVRam()
-			case MODE_NORMAL:
-				panic("[GPU::WriteGP0] normal mode???")
-			}
-		}
-
-		return
-	}
-
-	if gpu.mode == MODE_CPUtoVRamBlit {
-		lo := uint16(data & 0xffff)
-		hi := uint16(data >> 16)
-
-		gpu.DoCPUToVramTransfer(lo)
-		gpu.DoCPUToVramTransfer(hi)
-
-		gpu.wordsLeft -= 1
-
-		if gpu.wordsLeft == 0 {
-			gpu.mode = MODE_NORMAL
-		}
-
-		return
-	}
-
-	op := GetRange(data, 29, 3) // top 3 bits of a command
-
-	switch op {
-	case 0b000:
-		gpu.ExecuteMiscCommand(data)
-	case 0b001:
-		gpu.InitRenderPolygonCommand(data)
-	case 0b101:
-		gpu.InitCPUToVRamBlit(data)
-	case 0b110:
-		gpu.InitVramToCPUBlit(data)
-	case 0b111:
-		gpu.ExecuteEnvironmentCommand(data)
-	default:
-		panic(fmt.Sprintf("[GPU::WriteGP0] Unknown command: %x", data))
-	}
-}
-
-func (gpu *GPU) WriteGP1(data uint32) {
-	op := data >> 24 // the most significant byte determines what command
-
-	switch op {
-	case 0x00:
-		gpu.GP1Reset()
-	case 0x01:
-		gpu.GP1ResetCommandBuffer()
-	case 0x02:
-		gpu.GP1AcknowledgeInterrupt()
-	case 0x03:
-		gpu.GP1DisplayEnableSet(data)
-	case 0x04:
-		gpu.GP1DMADirectionSet(data)
-	case 0x05:
-		gpu.GP1DisplayVRamStartSet(data)
-	case 0x06:
-		gpu.GP1HorizDisplayRangeSet(data)
-	case 0x07:
-		gpu.GP1VertDisplayRangeSet(data)
-	case 0x08:
-		gpu.GP1DisplayModeSet(data)
-	default:
-		panic(fmt.Sprintf("[GPU::WriteGP1] Unknown command: %x", data))
-	}
-}
-
 func (gpu *GPU) Write32(address uint32, data uint32) {
 	switch address {
 	case 0x1f801810:
@@ -383,154 +295,13 @@ func (gpu *GPU) Write32(address uint32, data uint32) {
 	}
 }
 
-func (gpu *GPU) ExecuteMiscCommand(cmd uint32) {
-	op := (cmd >> 24) & 0xf
+func (gpu *GPU) PutPixel(x, y, r, g, b int, m bool) {
+	var colour uint32 = 0
 
-	switch op {
-	case 0x0:
-		// NOP
-	case 0x1:
-		// TODO clear texture cache
-	case 0x2:
-		gpu.InitFillRectangleVRAM(cmd)
-	default:
-		panic(fmt.Sprintf("[GPU::ExecuteMiscCommand] Unknown command: %x", cmd))
-	}
-}
+	PackRange(&colour, 0, uint32(r>>3), 5)
+	PackRange(&colour, 5, uint32(g>>3), 5)
+	PackRange(&colour, 10, uint32(b>>3), 5)
+	ModifyBit(&colour, 15, gpu.setMaskBit || m)
 
-/*
-Format for polygon command:
-
-	bit number   value   meaning
-	 31-29        001    polygon render
-	   28         1/0    gouraud / flat shading
-	   27         1/0    4 / 3 vertices
-	   26         1/0    textured / untextured
-	   25         1/0    semi transparent / solid
-	   24         1/0    raw texture / texture blending
-	  23-0        rgb    first color value.
-*/
-func (gpu *GPU) InitRenderPolygonCommand(cmd uint32) {
-	gpu.shape = SHAPE_POLYGON
-	gpu.shape_attr = GetRange(cmd, 24, 5)
-
-	nvert := 3 // polygons are triangles by default
-
-	if TestBit(cmd, 27) {
-		// well, it's quad then
-		nvert += 1
-	}
-
-	narg := nvert
-
-	if TestBit(cmd, 26) {
-		// If doing textured rendering, each vertex sent will also have a U/V texture coordinate attached to it, as well as a CLUT index.
-		narg += nvert
-	}
-
-	if TestBit(cmd, 28) {
-		// If doing gouraud shading, there will be one more color per vertex sent, and the initial color will be the one for vertex 0.
-		narg += nvert - 1
-	}
-
-	narg += 1
-
-	gpu.mode = MODE_RENDERING
-	gpu.fifo.Init(narg)
-	gpu.fifo.Push(cmd) // the initial command can be treated as the first argument
-}
-
-/*
-For transferring data (like texture or palettes) from cpu to gpu's vram
-
-1st  Command
-2nd  Destination Coord (YyyyXxxxh)  ;Xpos counted in halfwords
-3rd  Width+Height      (YsizXsizh)  ;Xsiz counted in halfwords
-...  Data              (...)      <--- usually transferred via DMA
-*/
-func (gpu *GPU) InitCPUToVRamBlit(cmd uint32) {
-	gpu.mode = MODE_CPUtoVRamBlit
-	gpu.fifo.Init(3)
-	gpu.fifo.Push(cmd)
-}
-
-/*
-Actual cpu to vram transfer. It transfers data from cpu into a specified rectangular area in vram
-*/
-func (gpu *GPU) DoCPUToVramTransfer(data uint16) {
-	vramX := gpu.startX + gpu.imgX
-	vramY := gpu.startY + gpu.imgY
-
-	gpu.vram.Write16(vramX, vramY, data)
-
-	gpu.imgX += 1
-
-	if gpu.imgX == gpu.imgWidth {
-		gpu.imgX = 0
-		gpu.imgY += 1
-	}
-}
-
-/*
-Opposite of GPU::InitCPUToVRamBlit
-
-1st  Command                       ;\
-2nd  Source Coord      (YyyyXxxxh) ; write to GP0 port (as usually)
-3rd  Width+Height      (YsizXsizh) ;/
-...  Data              (...)       ;<--- read from GPUREAD port (or via DMA)
-*/
-func (gpu *GPU) InitVramToCPUBlit(cmd uint32) {
-	gpu.mode = MODE_VramtoCPUBlit
-	gpu.fifo.Init(3)
-	gpu.fifo.Push(cmd)
-}
-
-func (gpu *GPU) DoVramToCPUTransfer() uint16 {
-	vramX := gpu.startX + gpu.imgX
-	vramY := gpu.startY + gpu.imgY
-
-	data := gpu.vram.Read16(vramX, vramY)
-
-	gpu.imgX += 1
-
-	if gpu.imgX == gpu.imgWidth {
-		gpu.imgX = 0
-		gpu.imgY += 1
-	}
-
-	return data
-}
-
-/*
-GP0(02h) - Fill Rectangle in VRAM
-
-	1st  Color+Command     (CcBbGgRrh)  ;24bit RGB value (see note)
-	2nd  Top Left Corner   (YyyyXxxxh)  ;Xpos counted in halfwords, steps of 10h
-	3rd  Width+Height      (YsizXsizh)  ;Xsiz counted in halfwords, steps of 10h
-*/
-func (gpu *GPU) InitFillRectangleVRAM(cmd uint32) {
-	gpu.mode = MODE_FillVRam
-	gpu.fifo.Init(3)
-	gpu.fifo.Push(cmd)
-}
-
-func (gpu *GPU) ExecuteEnvironmentCommand(cmd uint32) {
-	op := (cmd >> 24) & 0xf
-
-	switch op {
-	case 0x1:
-		gpu.GP0DrawModeSet(cmd)
-	case 0x2:
-		gpu.GP0TextureWindowSetup(cmd)
-	case 0x3:
-		gpu.GP0DrawingAreaTopLeftSet(cmd)
-	case 0x4:
-		gpu.GP0DrawingAreaBottomRightSet(cmd)
-	case 0x5:
-		gpu.GP0DrawingOffsetSet(cmd)
-	case 0x6:
-		gpu.GP0MaskBitSetup(cmd)
-	default:
-		panic(fmt.Sprintf("[GPU::ExecuteEnvironmentCommand] Unknown command: %x", cmd))
-	}
+	gpu.vram.Write16(x, y, uint16(colour))
 }

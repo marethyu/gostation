@@ -429,14 +429,3 @@ func (gpu *GPU) DoRenderTriangle(v1, v2, v3 *Vertex, clutX, clutY, texPageUBase,
 		w3Row += incY12
 	}
 }
-
-func (gpu *GPU) PutPixel(x, y, r, g, b int, m bool) {
-	var colour uint32 = 0
-
-	PackRange(&colour, 0, uint32(r>>3), 5)
-	PackRange(&colour, 5, uint32(g>>3), 5)
-	PackRange(&colour, 10, uint32(b>>3), 5)
-	ModifyBit(&colour, 15, gpu.setMaskBit || m)
-
-	gpu.vram.Write16(x, y, uint16(colour))
-}
