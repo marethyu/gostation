@@ -106,10 +106,10 @@ func (gpu *GPU) GP0MaskBitSetup(data uint32) {
 	gpu.drawUnmaskedPixels = TestBit(data, 1)
 }
 
-func (gpu *GPU) GP0DrawShape() {
+func (gpu *GPU) GP0RenderShape() {
 	switch gpu.shape {
 	case SHAPE_POLYGON:
-		gpu.DoRenderPolygon()
+		gpu.ProcessPolygonCommand()
 	}
 
 	gpu.fifo.Done()

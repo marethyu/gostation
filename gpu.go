@@ -45,6 +45,10 @@ const (
 	MODE_FillVRam
 )
 
+const (
+	SHAPE_POLYGON = iota
+)
+
 /* whut the forking fock why itz long */
 type GPU struct {
 	Core *GoStationCore
@@ -133,8 +137,8 @@ type GPU struct {
 	fifo *FIFO
 
 	/* for rendering commands */
-	shape      int   /* what shape to render when FIFO finished collecting all args */
-	shape_attr uint8 /* rendering attributes */
+	shape      int    /* what shape to render when FIFO finished collecting all args */
+	shape_attr uint32 /* rendering attributes */
 
 	/* for cpu to vram blit */
 	startX    int /* destination x (ie. starting position on vram in this context) */
@@ -294,7 +298,7 @@ func (gpu *GPU) WriteGP0(data uint32) {
 		if gpu.fifo.done {
 			switch gpu.mode {
 			case MODE_RENDERING:
-				gpu.GP0DrawShape()
+				gpu.GP0RenderShape()
 			case MODE_CPUtoVRamBlit:
 				gpu.GP0DoTransferToVRAM()
 			case MODE_VramtoCPUBlit:
@@ -408,7 +412,7 @@ Format for polygon command:
 */
 func (gpu *GPU) InitRenderPolygonCommand(cmd uint32) {
 	gpu.shape = SHAPE_POLYGON
-	gpu.shape_attr = uint8(GetRange(cmd, 24, 5))
+	gpu.shape_attr = GetRange(cmd, 24, 5)
 
 	nvert := 3 // polygons are triangles by default
 
