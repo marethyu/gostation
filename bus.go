@@ -73,7 +73,7 @@ func CPUAddressMask(i uint32) uint32 {
 }
 
 type Bus struct {
-	Core           *GoStationCore
+	Core           *GoStation
 	Ram            Access
 	Bios           Access
 	ScratchPad     Access
@@ -85,7 +85,7 @@ type Bus struct {
 	Expansion2     Access /* TODO implement debug uart */
 }
 
-func NewBus(core *GoStationCore, pathToBios string) *Bus {
+func NewBus(core *GoStation, pathToBios string) *Bus {
 	bios, err := os.ReadFile(pathToBios)
 	if err != nil {
 		log.Fatal("Unable to read BIOS: ", err)

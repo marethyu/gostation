@@ -12,7 +12,7 @@ func (gpu *GPU) WriteGP0(data uint32) {
 		if gpu.fifo.done {
 			switch gpu.mode {
 			case MODE_RENDERING:
-				gpu.GP0RenderShape()
+				gpu.GP0RenderPrimitive()
 			case MODE_CPUtoVRamBlit:
 				gpu.GP0DoTransferToVRAM()
 			case MODE_VramtoCPUBlit:
@@ -89,7 +89,7 @@ Format for polygon command:
 	  23-0        rgb    first color value.
 */
 func (gpu *GPU) GP0InitRenderPolygonCommand(cmd uint32) {
-	gpu.shape = SHAPE_POLYGON
+	gpu.shape = PRIMITIVE_POLYGON
 	gpu.shape_attr = GetRange(cmd, 24, 5)
 
 	nvert := 3 // polygons are triangles by default
@@ -319,9 +319,9 @@ func (gpu *GPU) GP0MaskBitSetup(data uint32) {
 	gpu.drawUnmaskedPixels = TestBit(data, 1)
 }
 
-func (gpu *GPU) GP0RenderShape() {
+func (gpu *GPU) GP0RenderPrimitive() {
 	switch gpu.shape {
-	case SHAPE_POLYGON:
+	case PRIMITIVE_POLYGON:
 		gpu.ProcessPolygonCommand()
 	}
 

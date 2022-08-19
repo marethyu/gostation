@@ -10,13 +10,13 @@ const (
 )
 
 type Interrupts struct {
-	Core *GoStationCore
+	Core *GoStation
 
 	Status uint32
 	Mask   uint32
 }
 
-func NewInterrupts(core *GoStationCore) *Interrupts {
+func NewInterrupts(core *GoStation) *Interrupts {
 	return &Interrupts{
 		core,
 		0,

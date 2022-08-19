@@ -42,12 +42,12 @@ const (
 )
 
 const (
-	SHAPE_POLYGON = iota
+	PRIMITIVE_POLYGON = iota
 )
 
 /* whut the forking fock why itz long */
 type GPU struct {
-	Core *GoStationCore
+	Core *GoStation
 
 	/*
 		Information for the most of the fields can be found here:
@@ -146,7 +146,7 @@ type GPU struct {
 	wordsLeft int
 }
 
-func NewGPU(core *GoStationCore) *GPU {
+func NewGPU(core *GoStation) *GPU {
 	return &GPU{
 		core,
 		0,

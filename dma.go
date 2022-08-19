@@ -10,7 +10,7 @@ const (
 )
 
 type DMA struct {
-	Core *GoStationCore
+	Core *GoStation
 
 	channel [7]DMAChannel
 
@@ -25,7 +25,7 @@ type DMA struct {
 	dmaIRQFlag uint8 /* bits 24-30: IRQ Flags for DMA0..DMA6 */
 }
 
-func NewDMA(core *GoStationCore) *DMA {
+func NewDMA(core *GoStation) *DMA {
 	return &DMA{
 		core,
 		[7]DMAChannel{},

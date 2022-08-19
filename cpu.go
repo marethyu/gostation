@@ -5,7 +5,7 @@ import (
 )
 
 type CPU struct {
-	Core *GoStationCore
+	Core *GoStation
 
 	/* All registers */
 	r  [32]uint32 /* R0 to R31 */
@@ -34,7 +34,7 @@ type CPU struct {
 	current_pc uint32
 }
 
-func NewCPU(core *GoStationCore) *CPU {
+func NewCPU(core *GoStation) *CPU {
 	return &CPU{
 		core,
 		[32]uint32{0},
