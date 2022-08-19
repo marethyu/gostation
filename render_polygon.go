@@ -318,7 +318,11 @@ func (gpu *GPU) DoRenderTriangle(v1, v2, v3 *Vertex, clutX, clutY, texPageUBase,
 				pix := uint32(gpu.vram.Read16(x, y))
 
 				if TestBit(pix, 15) {
-					continue // masked
+					// masked
+					w1 += incX23
+					w2 += incX31
+					w3 += incX12
+					continue
 				}
 			}
 
