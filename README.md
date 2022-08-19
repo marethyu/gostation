@@ -10,6 +10,7 @@ TODO:
 - CDROM
 - timers
 - timing
+  * Using [this](https://github.com/JaCzekanski/ps1-tests/blob/master/cpu/access-time/psx.log) as reference, implement bus waitstates
 - better DMA behaviour
 - controller input
 - interrupt handling
