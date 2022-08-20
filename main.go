@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"unsafe"
 
 	"github.com/veandco/go-sdl2/sdl"
 )
@@ -31,7 +32,7 @@ func run() int {
 	}
 	defer renderer.Destroy()
 
-	texture, err = renderer.CreateTexture(sdl.PIXELFORMAT_ARGB8888, sdl.TEXTUREACCESS_STREAMING, VRAM_WIDTH, VRAM_HEIGHT)
+	texture, err = renderer.CreateTexture(sdl.PIXELFORMAT_BGR555, sdl.TEXTUREACCESS_STREAMING, VRAM_WIDTH, VRAM_HEIGHT)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to create texture: %s\n", err)
 		return 4
@@ -58,7 +59,7 @@ func run() int {
 
 		gopsx.Update()
 
-		texture.Update(nil, gopsx.pixels, VRAM_WIDTH*4)
+		texture.Update(nil, unsafe.Pointer(&gopsx.GPU.vram.buffer[0]), VRAM_WIDTH*2)
 
 		renderer.Copy(texture, nil, nil)
 		renderer.Present()

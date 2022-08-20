@@ -21,7 +21,6 @@ type GoStation struct {
 	DMA        *DMA
 	Interrupts *Interrupts
 
-	pixels []byte
 	cycles uint64
 }
 
@@ -32,7 +31,6 @@ func NewGoStation(pathToBios string) *GoStation {
 	gostation.GPU = NewGPU(&gostation)
 	gostation.DMA = NewDMA(&gostation)
 	gostation.Interrupts = NewInterrupts(&gostation)
-	gostation.pixels = make([]byte, VRAM_WIDTH*VRAM_HEIGHT*4)
 	gostation.cycles = 0
 	return &gostation
 }
@@ -60,33 +58,12 @@ func (gostation *GoStation) LoadExecutable(pathToExe string) {
 	fmt.Printf("[GoStation::LoadExecutable] executable successfully loaded; pc is now in %08x\n", gostation.CPU.pc)
 }
 
-func (gostation *GoStation) UpdateDisplay() {
-	for y := 0; y < VRAM_HEIGHT; y += 1 {
-		for x := 0; x < VRAM_WIDTH; x += 1 {
-			offset := y*VRAM_WIDTH*4 + x*4
-			pixel := gostation.GPU.vram.Read16(x, y)
-
-			// after bitmask, shift 3 bits right to upgrade rgb values from 5 bit to 8 bit
-			r := uint8(GetRange(uint32(pixel), 0, 5) << 3)
-			g := uint8(GetRange(uint32(pixel), 5, 5) << 3)
-			b := uint8(GetRange(uint32(pixel), 10, 5) << 3)
-
-			gostation.pixels[offset] = b
-			gostation.pixels[offset+1] = g
-			gostation.pixels[offset+2] = r
-			gostation.pixels[offset+3] = 255
-		}
-	}
-}
-
 func (gostation *GoStation) Update() {
 	for gostation.cycles < CPU_CYCLES_PER_FRAME {
 		// gostation.CPU.Log(true)
 		gostation.Step()
 	}
 	gostation.cycles = 0
-
-	gostation.UpdateDisplay()
 }
 
 func (gostation *GoStation) Step() {
