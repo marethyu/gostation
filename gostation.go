@@ -53,7 +53,12 @@ func (gostation *GoStation) LoadExecutable(pathToExe string) {
 	gostation.CPU.pc = exe.Header.PC0
 	gostation.CPU.next_pc = exe.Header.PC0 + 4
 
-	// TODO other fields like gp0?
+	gostation.CPU.modifyReg(28, exe.Header.GP0)
+
+	if exe.Header.SAddr != 0 {
+		gostation.CPU.modifyReg(29, exe.Header.SAddr+exe.Header.SSize)
+		gostation.CPU.modifyReg(30, exe.Header.SAddr+exe.Header.SSize)
+	}
 
 	fmt.Printf("[GoStation::LoadExecutable] executable successfully loaded; pc is now in %08x\n", gostation.CPU.pc)
 }
