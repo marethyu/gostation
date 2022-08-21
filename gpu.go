@@ -144,6 +144,8 @@ type GPU struct {
 	imgX      int /* x coordinate relative to "image" being transferred */
 	imgY      int /* y coordinate relative to "image" being transferred */
 	wordsLeft int
+
+	gpuReadVal uint32
 }
 
 func NewGPU(core *GoStation) *GPU {
@@ -197,6 +199,7 @@ func NewGPU(core *GoStation) *GPU {
 		NewVRAM(),
 		MODE_NORMAL,
 		NewFIFO(),
+		0,
 		0,
 		0,
 		0,
@@ -272,7 +275,7 @@ func (gpu *GPU) GPUREAD() uint32 {
 		return (hi << 16) | lo
 	}
 
-	return 0
+	return gpu.gpuReadVal
 }
 
 func (gpu *GPU) Read32(address uint32) uint32 {

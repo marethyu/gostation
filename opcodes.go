@@ -50,7 +50,7 @@ func (cpu *CPU) OpBcondZ(opcode uint32) {
 		test = val >= 0
 		link = true
 	default:
-		panic(fmt.Sprintf("[CPU::OpBcondZ] Unknown condition: %x", cond))
+		panic(fmt.Sprintf("[CPU::OpBcondZ] Unknown condition: %x (opcode=%08x)", cond, opcode))
 	}
 
 	if link {

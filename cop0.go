@@ -81,6 +81,8 @@ func (cop0 *Coprocessor0) GetRegister(reg uint32) uint32 {
 		return 0 // TODO
 	case 7:
 		return 0 // TODO
+	case 8:
+		return 0 // TODO
 	case 9:
 		return 0 // TODO
 	case 11:

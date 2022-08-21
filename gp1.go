@@ -26,6 +26,9 @@ func (gpu *GPU) WriteGP1(data uint32) {
 		gpu.GP1VertDisplayRangeSet(data)
 	case 0x08:
 		gpu.GP1DisplayModeSet(data)
+	case 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+		0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F:
+		gpu.GP1GPUInfo(data)
 	default:
 		panic(fmt.Sprintf("[GPU::WriteGP1] Unknown command: %x", data))
 	}
@@ -202,5 +205,45 @@ func (gpu *GPU) GP1DisplayModeSet(data uint32) {
 
 	if !gpu.verticalInterlace {
 		gpu.interlace = true
+	}
+}
+
+/*
+	https://psx-spx.consoledev.net/graphicsprocessingunitgpu/#gp110h-get-gpu-info
+
+00h-01h = Returns Nothing (old value in GPUREAD remains unchanged)
+02h     = Read Texture Window setting  ;GP0(E2h) ;20bit/MSBs=Nothing
+03h     = Read Draw area top left      ;GP0(E3h) ;20bit/MSBs=Nothing
+04h     = Read Draw area bottom right  ;GP0(E4h) ;20bit/MSBs=Nothing
+05h     = Read Draw offset             ;GP0(E5h) ;22bit
+06h     = Returns Nothing (old value in GPUREAD remains unchanged)
+07h     = Read GPU Type (usually 2)    ;see "GPU Versions" chapter
+08h     = Unknown (Returns 00000000h) (lightgun on some GPUs?)
+09h-0Fh = Returns Nothing (old value in GPUREAD remains unchanged)
+10h-FFFFFFh = Mirrors of 00h..0Fh
+*/
+func (gpu *GPU) GP1GPUInfo(data uint32) {
+	switch data & 0xf {
+	case 0x2:
+		PackRange(&gpu.gpuReadVal, 0, gpu.texWindowMaskX, 5)
+		PackRange(&gpu.gpuReadVal, 5, gpu.texWindowMaskY, 5)
+		PackRange(&gpu.gpuReadVal, 10, gpu.texWindowOffsetX, 5)
+		PackRange(&gpu.gpuReadVal, 15, gpu.texWindowOffsetY, 5)
+		PackRange(&gpu.gpuReadVal, 20, 0, 12)
+	case 0x3:
+		PackRange(&gpu.gpuReadVal, 0, gpu.drawingAreaX1, 10)
+		PackRange(&gpu.gpuReadVal, 10, gpu.drawingAreaY1, 10)
+		PackRange(&gpu.gpuReadVal, 20, 0, 12)
+	case 0x4:
+		PackRange(&gpu.gpuReadVal, 0, gpu.drawingAreaX2, 10)
+		PackRange(&gpu.gpuReadVal, 10, gpu.drawingAreaY2, 10)
+		PackRange(&gpu.gpuReadVal, 20, 0, 12)
+	case 0x5:
+		PackRange(&gpu.gpuReadVal, 0, uint32(gpu.drawingXOffset), 11)
+		PackRange(&gpu.gpuReadVal, 11, uint32(gpu.drawingYOffset), 11)
+	case 0x7:
+		gpu.gpuReadVal = 2
+	case 0x8:
+		gpu.gpuReadVal = 0
 	}
 }

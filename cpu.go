@@ -94,7 +94,11 @@ func (cpu *CPU) Log(logRegisters bool) {
 	fmt.Println()
 }
 
-/* Refer to this page https://psx-spx.consoledev.net/cpuspecifications/#cpu-opcode-encoding for all opcodes and its encodings */
+/*
+Refer to this page https://psx-spx.consoledev.net/cpuspecifications/#cpu-opcode-encoding for all opcodes and its encodings
+
+also this https://www.cs.cmu.edu/afs/cs/academic/class/15740-f97/public/doc/mips-isa.pdf for instructions not referenced in the link...
+*/
 func (cpu *CPU) ExecutePrimaryOpcode(opcode uint32) {
 	op := GetRange(opcode, 26, 6)
 
