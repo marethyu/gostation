@@ -12,7 +12,7 @@ https://ffhacktics.com/wiki/PSX_instruction_set
 */
 
 func (cpu *CPU) OpIllegal() {
-	cpu.enterException(EXC_RESERVED_INS, "illegal or reserved instruction")
+	cpu.cop0.EnterException(EXC_RESERVED_INS, "illegal or reserved instruction")
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -171,7 +171,7 @@ func (cpu *CPU) OpADDI(opcode uint32) {
 	// enter exception if a+b results in overflow or underflow
 	if (a > 0 && b > math.MaxInt32-a) ||
 		(a < 0 && b < math.MinInt32-a) {
-		cpu.enterException(EXC_OVERFLOW, "signed overflow encountered in CPU::OpADDI")
+		cpu.cop0.EnterException(EXC_OVERFLOW, "signed overflow encountered in CPU::OpADDI")
 	}
 
 	val := uint32(a + b)
@@ -324,7 +324,7 @@ func (cpu *CPU) OpLoadHWord(opcode uint32) {
 
 	// addresses must be 16 bit aligned
 	if addr%2 != 0 {
-		cpu.enterException(EXC_ADDR_ERROR_LOAD, "unaligned address during lh")
+		cpu.cop0.EnterException(EXC_ADDR_ERROR_LOAD, "unaligned address during lh")
 	} else {
 		val := SignExtendedHWord(cpu.Core.Bus.Read16(addr))
 		cpu.loadDelaySlotInit(rt, val)
@@ -422,7 +422,7 @@ func (cpu *CPU) OpLoadWord(opcode uint32) {
 
 	// addresses must be 32 bit aligned
 	if addr%4 != 0 {
-		cpu.enterException(EXC_ADDR_ERROR_LOAD, "unaligned address during lw")
+		cpu.cop0.EnterException(EXC_ADDR_ERROR_LOAD, "unaligned address during lw")
 	} else {
 		val := cpu.Core.Bus.Read32(addr)
 		cpu.loadDelaySlotInit(rt, val)
@@ -461,7 +461,7 @@ func (cpu *CPU) OpLoadHWordU(opcode uint32) {
 
 	// addresses must be 16 bit aligned
 	if addr%2 != 0 {
-		cpu.enterException(EXC_ADDR_ERROR_LOAD, "unaligned address during lhu")
+		cpu.cop0.EnterException(EXC_ADDR_ERROR_LOAD, "unaligned address during lhu")
 	} else {
 		val := cpu.Core.Bus.Read16(addr)
 		cpu.loadDelaySlotInit(rt, uint32(val))
@@ -513,7 +513,7 @@ func (cpu *CPU) OpLoadWordRight(opcode uint32) {
 // 101xxx | rs   | rt   | <--immediate16bit--> | store rt,[rs+imm]
 // sb  rt,imm(rs)    [imm+rs]=(rt AND FFh)   ;store 8bit
 func (cpu *CPU) OpStoreByte(opcode uint32) {
-	if TestBit(cpu.sr, 16) {
+	if cpu.cop0.CacheIsolated() {
 		// Ignore write when cache is isolated
 		return
 	}
@@ -534,7 +534,7 @@ func (cpu *CPU) OpStoreByte(opcode uint32) {
 // 101xxx | rs   | rt   | <--immediate16bit--> | store rt,[rs+imm]
 // sh  rt,imm(rs)    [imm+rs]=(rt AND FFFFh) ;store 16bit
 func (cpu *CPU) OpStoreHWord(opcode uint32) {
-	if TestBit(cpu.sr, 16) {
+	if cpu.cop0.CacheIsolated() {
 		// Ignore write when cache is isolated
 		return
 	}
@@ -547,7 +547,7 @@ func (cpu *CPU) OpStoreHWord(opcode uint32) {
 
 	// addresses must be 16 bit aligned
 	if addr%2 != 0 {
-		cpu.enterException(EXC_ADDR_ERROR_STORE, "unaligned address during sh")
+		cpu.cop0.EnterException(EXC_ADDR_ERROR_STORE, "unaligned address during sh")
 	} else {
 		val := uint16(cpu.reg(rt))
 		cpu.Core.Bus.Write16(addr, val)
@@ -594,7 +594,7 @@ func (cpu *CPU) OpStoreWordLeft(opcode uint32) {
 // 101xxx | rs   | rt   | <--immediate16bit--> | store rt,[rs+imm]
 // sw  rt,imm(rs)    [imm+rs]=rt             ;store 32bit
 func (cpu *CPU) OpStoreWord(opcode uint32) {
-	if TestBit(cpu.sr, 16) {
+	if cpu.cop0.CacheIsolated() {
 		// Ignore write when cache is isolated
 		return
 	}
@@ -607,7 +607,7 @@ func (cpu *CPU) OpStoreWord(opcode uint32) {
 
 	// addresses must be 32 bit aligned
 	if addr%4 != 0 {
-		cpu.enterException(EXC_ADDR_ERROR_STORE, "unaligned address during sw")
+		cpu.cop0.EnterException(EXC_ADDR_ERROR_STORE, "unaligned address during sw")
 	} else {
 		val := cpu.reg(rt)
 		cpu.Core.Bus.Write32(addr, val)
@@ -777,7 +777,7 @@ func (cpu *CPU) OpJALR(opcode uint32) {
 func (cpu *CPU) OpSYS(opcode uint32) {
 	// comment := GetRange(opcode, 6, 20)
 
-	cpu.enterException(EXC_SYSCALL, fmt.Sprintf("system call: %s", cpu.identifySystemCall()))
+	cpu.cop0.EnterException(EXC_SYSCALL, fmt.Sprintf("system call: %s", cpu.identifySystemCall()))
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -789,7 +789,7 @@ func (cpu *CPU) OpSYS(opcode uint32) {
 func (cpu *CPU) OpBRK(opcode uint32) {
 	// comment := GetRange(opcode, 6, 20)
 
-	cpu.enterException(EXC_BREAK, "breakpoint")
+	cpu.cop0.EnterException(EXC_BREAK, "breakpoint")
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -947,7 +947,7 @@ func (cpu *CPU) OpADD(opcode uint32) {
 	// enter exception if a+b results in overflow or underflow
 	if (a > 0 && b > math.MaxInt32-a) ||
 		(a < 0 && b < math.MinInt32-a) {
-		cpu.enterException(EXC_OVERFLOW, "signed overflow encountered in CPU::OpADD")
+		cpu.cop0.EnterException(EXC_OVERFLOW, "signed overflow encountered in CPU::OpADD")
 	}
 
 	val := uint32(a + b)
@@ -985,7 +985,7 @@ func (cpu *CPU) OpSUB(opcode uint32) {
 
 	if (b < 0 && a > math.MaxInt32+b) ||
 		(b > 0 && a < math.MinInt32+b) {
-		cpu.enterException(EXC_OVERFLOW, "signed overflow encountered in CPU::OpSUB")
+		cpu.cop0.EnterException(EXC_OVERFLOW, "signed overflow encountered in CPU::OpSUB")
 	}
 
 	val := uint32(a - b)
@@ -1120,18 +1120,7 @@ func (cpu *CPU) OpMFC0(opcode uint32) {
 	rd := GetRange(opcode, 11, 5)
 	rt := int(GetRange(opcode, 16, 5))
 
-	var val uint32
-	switch rd {
-	case 12:
-		val = cpu.sr
-	case 13:
-		val = cpu.cause
-	case 14:
-		val = cpu.epc
-	default:
-		panic(fmt.Sprintf("[CPU::OpMFC0] Unsupported COP0 register: %x", rd))
-	}
-
+	val := cpu.cop0.GetRegister(rd)
 	cpu.loadDelaySlotInit(rt, val)
 }
 
@@ -1146,20 +1135,7 @@ func (cpu *CPU) OpMTC0(opcode uint32) {
 	rt := int(GetRange(opcode, 16, 5))
 
 	val := cpu.reg(rt)
-	switch rd {
-	case 3, 5, 6, 7, 9, 11:
-		if val != 0 {
-			panic("[CPU::OpMTC0] The breakpoint registers are implemented yet!")
-		}
-	case 12:
-		cpu.sr = val
-	case 13:
-		cpu.cause = val
-	case 14:
-		cpu.epc = val
-	default:
-		panic(fmt.Sprintf("[CPU::OpMTC0] Unsupported COP0 register: %x", rd))
-	}
+	cpu.cop0.ModifyRegister(rd, val)
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -1173,18 +1149,15 @@ func (cpu *CPU) OpRFE(opcode uint32) {
 		panic(fmt.Sprintf("[CPU::OpRFE] Unknown opcode: %x", opcode))
 	}
 
-	var mask uint32 = 0b111111
-	mode := cpu.sr & mask
-	cpu.sr &= ^mask
-	cpu.sr |= mode >> 2
+	cpu.cop0.LeaveException()
 }
 
 func (cpu *CPU) OpLWC0(opcode uint32) {
-	cpu.enterException(EXC_COP_UNUSABLE, "lwc0 is not supported")
+	cpu.cop0.EnterException(EXC_COP_UNUSABLE, "lwc0 is not supported")
 }
 
 func (cpu *CPU) OpLWC1(opcode uint32) {
-	cpu.enterException(EXC_COP_UNUSABLE, "lwc1 is not supported")
+	cpu.cop0.EnterException(EXC_COP_UNUSABLE, "lwc1 is not supported")
 }
 
 func (cpu *CPU) OpLWC2(opcode uint32) {
@@ -1192,15 +1165,15 @@ func (cpu *CPU) OpLWC2(opcode uint32) {
 }
 
 func (cpu *CPU) OpLWC3(opcode uint32) {
-	cpu.enterException(EXC_COP_UNUSABLE, "lwc3 is not supported")
+	cpu.cop0.EnterException(EXC_COP_UNUSABLE, "lwc3 is not supported")
 }
 
 func (cpu *CPU) OpSWC0(opcode uint32) {
-	cpu.enterException(EXC_COP_UNUSABLE, "swc0 is not supported")
+	cpu.cop0.EnterException(EXC_COP_UNUSABLE, "swc0 is not supported")
 }
 
 func (cpu *CPU) OpSWC1(opcode uint32) {
-	cpu.enterException(EXC_COP_UNUSABLE, "swc1 is not supported")
+	cpu.cop0.EnterException(EXC_COP_UNUSABLE, "swc1 is not supported")
 }
 
 func (cpu *CPU) OpSWC2(opcode uint32) {
@@ -1208,5 +1181,5 @@ func (cpu *CPU) OpSWC2(opcode uint32) {
 }
 
 func (cpu *CPU) OpSWC3(opcode uint32) {
-	cpu.enterException(EXC_COP_UNUSABLE, "swc3 is not supported")
+	cpu.cop0.EnterException(EXC_COP_UNUSABLE, "swc3 is not supported")
 }

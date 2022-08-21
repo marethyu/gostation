@@ -13,6 +13,8 @@ type CPU struct {
 	hi uint32
 	lo uint32
 
+	current_pc uint32
+
 	/* necessary for branch delay slot */
 	next_pc     uint32
 	isBranch    bool /* true if branch or jump occured */
@@ -24,41 +26,39 @@ type CPU struct {
 	pending_val    uint32
 	load_countdown int
 
-	/* cop0r12 - SR - System status register (R/W) */
-	sr uint32
-	/* cop0r13 - CAUSE - (R)  Describes the most recently recognised exception */
-	cause uint32
-	/* cop0r14 - EPC - Return Address from Trap */
-	epc uint32
-
-	current_pc uint32
+	cop0 *Coprocessor0
 }
 
 func NewCPU(core *GoStation) *CPU {
-	return &CPU{
-		core,
-		[32]uint32{0},
-		0xbfc00000,
-		0,
-		0,
-		0xbfc00004,
-		false,
-		false,
-		false,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-		0,
-	}
+	cpu := CPU{}
+
+	cpu.Core = core
+
+	cpu.r = [32]uint32{0}
+	cpu.pc = 0xbfc00000
+	cpu.hi = 0
+	cpu.lo = 0
+
+	cpu.current_pc = 0
+
+	cpu.next_pc = cpu.pc + 4
+	cpu.isBranch = false
+	cpu.isDelaySlot = false
+
+	cpu.pending_load = false
+	cpu.pending_r = 0
+	cpu.pending_val = 0
+	cpu.load_countdown = 0
+
+	cpu.cop0 = NewCoprocessor0(&cpu)
+
+	return &cpu
 }
 
 func (cpu *CPU) Step() {
 	cpu.current_pc = cpu.pc
 	if cpu.current_pc%4 != 0 {
-		cpu.enterException(EXC_ADDR_ERROR_LOAD, "misaligned pc")
+		cpu.cop0.EnterException(EXC_ADDR_ERROR_LOAD, "misaligned pc")
 	}
 	opcode := cpu.Core.Bus.Read32(cpu.pc)
 
@@ -268,7 +268,7 @@ func (cpu *CPU) ExecuteCOP0Opcode(opcode uint32) {
 }
 
 func (cpu *CPU) ExecuteCOP1Opcode(opcode uint32) {
-	cpu.enterException(EXC_COP_UNUSABLE, "PS1 does not support COP1")
+	cpu.cop0.EnterException(EXC_COP_UNUSABLE, "PS1 does not support COP1")
 }
 
 func (cpu *CPU) ExecuteCOP2Opcode(opcode uint32) {
@@ -276,7 +276,11 @@ func (cpu *CPU) ExecuteCOP2Opcode(opcode uint32) {
 }
 
 func (cpu *CPU) ExecuteCOP3Opcode(opcode uint32) {
-	cpu.enterException(EXC_COP_UNUSABLE, "PS1 does not support COP3")
+	cpu.cop0.EnterException(EXC_COP_UNUSABLE, "PS1 does not support COP3")
+}
+
+func (cpu *CPU) reg(i int) uint32 {
+	return cpu.r[i]
 }
 
 func (cpu *CPU) modifyReg(i int, v uint32) {
@@ -287,10 +291,6 @@ func (cpu *CPU) modifyReg(i int, v uint32) {
 		// Uh well... never mind the load
 		cpu.pending_load = false
 	}
-}
-
-func (cpu *CPU) reg(i int) uint32 {
-	return cpu.r[i]
 }
 
 func (cpu *CPU) loadDelaySlotInit(i int, v uint32) {
