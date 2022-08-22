@@ -65,6 +65,7 @@ func (gostation *GoStation) LoadExecutable(pathToExe string) {
 
 func (gostation *GoStation) Update() {
 	for gostation.cycles < CPU_CYCLES_PER_FRAME {
+		gostation.CheckBIOSFunctionCalls(false)
 		// gostation.CPU.Log(true)
 		gostation.Step()
 	}
@@ -74,4 +75,29 @@ func (gostation *GoStation) Update() {
 func (gostation *GoStation) Step() {
 	gostation.CPU.Step()
 	gostation.cycles += 2
+}
+
+/*
+https://psx-spx.consoledev.net/kernelbios/#bios-function-summary
+*/
+func (gostation *GoStation) CheckBIOSFunctionCalls(log bool) {
+	switch gostation.CPU.pc {
+	case 0xa0: /* A function */
+		fn := gostation.CPU.reg(9)
+		if log {
+			fmt.Printf("[GoStation::CheckBIOSFunctionCalls] BIOS A(%02Xh)\n", fn)
+		}
+		BIOSAFunction(gostation, fn)
+	case 0xb0: /* B function */
+		fn := gostation.CPU.reg(9)
+		if log {
+			fmt.Printf("[GoStation::CheckBIOSFunctionCalls] BIOS B(%02Xh)\n", fn)
+		}
+		BIOSBFunction(gostation, fn)
+	case 0xc0: /* C function */
+		fn := gostation.CPU.reg(9)
+		if log {
+			fmt.Printf("[GoStation::CheckBIOSFunctionCalls] BIOS C(%02Xh)\n", fn)
+		}
+	}
 }

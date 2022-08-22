@@ -124,7 +124,7 @@ func (cop0 *Coprocessor0) ModifyRegister(reg uint32, v uint32) {
 }
 
 func (cop0 *Coprocessor0) EnterException(cause uint32, msg string) {
-	fmt.Printf("[Coprocessor0::EnterException] %s\n", msg)
+	// fmt.Printf("[Coprocessor0::EnterException] %s\n", msg)
 
 	var vector uint32
 	if TestBit(cop0.sr, 22) {

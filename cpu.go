@@ -96,8 +96,6 @@ func (cpu *CPU) Log(logRegisters bool) {
 
 /*
 Refer to this page https://psx-spx.consoledev.net/cpuspecifications/#cpu-opcode-encoding for all opcodes and its encodings
-
-also this https://www.cs.cmu.edu/afs/cs/academic/class/15740-f97/public/doc/mips-isa.pdf for instructions not referenced in the link...
 */
 func (cpu *CPU) ExecutePrimaryOpcode(opcode uint32) {
 	op := GetRange(opcode, 26, 6)
@@ -184,8 +182,7 @@ func (cpu *CPU) ExecutePrimaryOpcode(opcode uint32) {
 	case 0b010011:
 		cpu.ExecuteCOP3Opcode(opcode)
 	default:
-		fmt.Printf("[CPU::ExecutePrimaryOpcode] Unknown opcode: %x\n", opcode)
-		cpu.OpIllegal()
+		cpu.OpIllegal(opcode)
 	}
 }
 
@@ -250,8 +247,7 @@ func (cpu *CPU) ExecuteSecondaryOpcode(opcode uint32) {
 	case 0x2b:
 		cpu.OpSLTU(opcode)
 	default:
-		fmt.Printf("[CPU::ExecuteSecondaryOpcode] Unknown opcode: %x\n", opcode)
-		cpu.OpIllegal()
+		cpu.OpIllegal(opcode)
 	}
 }
 
@@ -266,8 +262,7 @@ func (cpu *CPU) ExecuteCOP0Opcode(opcode uint32) {
 	case 0b10000:
 		cpu.OpRFE(opcode)
 	default:
-		fmt.Printf("[CPU::ExecuteCOP0Opcode] Unknown opcode: %x\n", opcode)
-		cpu.OpIllegal()
+		cpu.OpIllegal(opcode)
 	}
 }
 
@@ -311,19 +306,4 @@ func (cpu *CPU) loadDelaySlotInit(i int, v uint32) {
 func (cpu *CPU) branch(imm16 uint32) {
 	cpu.next_pc = cpu.pc + (imm16 << 2)
 	cpu.isBranch = true
-}
-
-func (cpu *CPU) identifySystemCall() string {
-	switch cpu.reg(4) {
-	case 0x0:
-		return "unknown (r4=0)"
-	case 0x1:
-		return "BIOS::EnterCriticalSection()"
-	case 0x2:
-		return "BIOS::ExitCriticalSection()"
-	case 0x3:
-		return "BIOS::ChangeThreadSubFunction(addr)"
-	default:
-		return "calling BIOS::DeliverEvent(F0000010h,4000h)"
-	}
 }

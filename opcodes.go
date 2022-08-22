@@ -11,7 +11,8 @@ https://psx-spx.consoledev.net/cpuspecifications/
 https://ffhacktics.com/wiki/PSX_instruction_set
 */
 
-func (cpu *CPU) OpIllegal() {
+func (cpu *CPU) OpIllegal(opcode uint32) {
+	fmt.Printf("[CPU::OpIllegal] Unknown opcode: %x\n", opcode)
 	cpu.cop0.EnterException(EXC_RESERVED_INS, "illegal or reserved instruction")
 }
 
@@ -19,14 +20,16 @@ func (cpu *CPU) OpIllegal() {
 //
 //	6bit  | 5bit | 5bit | 5bit | 5bit |  6bit  |
 //
-// 000001 | rs   | 00000| <--immediate16bit--> | bltz
-// 000001 | rs   | 00001| <--immediate16bit--> | bgez
-// 000001 | rs   | 10000| <--immediate16bit--> | bltzal
-// 000001 | rs   | 10001| <--immediate16bit--> | bgezal
+// 000001 | rs   | 0xxx0| <--immediate16bit--> | bltz
+// 000001 | rs   | 0xxx1| <--immediate16bit--> | bgez
+// 000001 | rs   | 1xxx0| <--immediate16bit--> | bltzal
+// 000001 | rs   | 1xxx1| <--immediate16bit--> | bgezal
 // bltz   rs,dest     if rs<0   then pc=$+4+(-8000h..+7FFFh)*4
 // bgez   rs,dest     if rs>=0  then pc=$+4+(-8000h..+7FFFh)*4
 // bltzal rs,dest     if rs<0   then pc=$+4+(..)*4, ra=$+8
 // bgezal rs,dest     if rs>=0  then pc=$+4+(..)*4, ra=$+8
+//
+// Note: bits 17-19 are ignored?!?
 func (cpu *CPU) OpBcondZ(opcode uint32) {
 	imm16 := SignExtendedWord(GetRange(opcode, 0, 16))
 	cond := GetRange(opcode, 16, 5)
@@ -35,23 +38,12 @@ func (cpu *CPU) OpBcondZ(opcode uint32) {
 	val := int32(cpu.reg(rs))
 
 	var test bool
-	var link bool
-	switch cond {
-	case 0b00000:
-		test = val < 0
-		link = false
-	case 0b00001:
+	if TestBit(cond, 0) {
 		test = val >= 0
-		link = false
-	case 0b10000:
+	} else {
 		test = val < 0
-		link = true
-	case 0b10001:
-		test = val >= 0
-		link = true
-	default:
-		panic(fmt.Sprintf("[CPU::OpBcondZ] Unknown condition: %x (opcode=%08x)", cond, opcode))
 	}
+	link := TestBit(cond, 4)
 
 	if link {
 		cpu.modifyReg(31, cpu.next_pc) // store the return address in ra
@@ -777,7 +769,7 @@ func (cpu *CPU) OpJALR(opcode uint32) {
 func (cpu *CPU) OpSYS(opcode uint32) {
 	// comment := GetRange(opcode, 6, 20)
 
-	cpu.cop0.EnterException(EXC_SYSCALL, fmt.Sprintf("system call: %s", cpu.identifySystemCall()))
+	cpu.cop0.EnterException(EXC_SYSCALL, fmt.Sprintf("system call: %s", IdentifySystemCall(cpu.reg(4))))
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |

@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"encoding/binary"
-	"fmt"
 	"log"
 	"os"
 	"reflect"
@@ -81,13 +80,6 @@ func NewPSXExe(pathToExe string) *PSXExecutable {
 		panic("[NewPSXExe] The PSX executable does not begin with 'PSX-X EXE'")
 	}
 
-	fmt.Printf("[NewPSXExe] %s loaded\n", pathToExe)
-	fmt.Printf("pc0=%08x\n", header.PC0)
-	fmt.Printf("taddr=%08x, tsize=%08x\n", header.TAddr, header.TSize)
-	fmt.Printf("daddr=%08x, dsize=%08x\n", header.DAddr, header.DSize)
-	fmt.Printf("baddr=%08x, bsize=%08x\n", header.BAddr, header.BSize)
-	fmt.Printf("saddr=%08x, ssize=%08x\n", header.SAddr, header.SSize)
-
 	stats, statsErr := exe.Stat()
 	if statsErr != nil {
 		log.Fatal("[NewPSXExe] Stat on PSX executable failed: ", statsErr)
@@ -95,8 +87,6 @@ func NewPSXExe(pathToExe string) *PSXExecutable {
 
 	var size int64 = stats.Size()
 	bytes := make([]byte, size)
-
-	fmt.Printf("Size of text data in file: %d\n", size-0x800)
 
 	if uint32(size-0x800) < header.TSize {
 		panic("[NewPSXExe] header.TSize does not agree with actual size?")
