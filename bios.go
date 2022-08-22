@@ -26,7 +26,11 @@ Only TTY functions are supported
 https://psx-spx.consoledev.net/kernelbios/#bios-tty-console-std_io
 */
 
-func BIOSAFunction(gostation *GoStation, r9 uint32) {
+func BIOSAFunction(gostation *GoStation, r9 uint32, log bool) {
+	if log {
+		fmt.Printf("[BIOSAFunction] BIOS A(%02Xh)\n", r9)
+	}
+
 	switch r9 {
 	case 0x3c:
 		BIOSPutchar(gostation)
@@ -37,7 +41,11 @@ func BIOSAFunction(gostation *GoStation, r9 uint32) {
 	}
 }
 
-func BIOSBFunction(gostation *GoStation, r9 uint32) {
+func BIOSBFunction(gostation *GoStation, r9 uint32, log bool) {
+	if log {
+		fmt.Printf("[BIOSBFunction] BIOS B(%02Xh)\n", r9)
+	}
+
 	switch r9 {
 	case 0x49:
 		// TODO

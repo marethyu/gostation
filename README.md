@@ -10,20 +10,18 @@ TODO:
 - CDROM
 - timers
 - timing
+  * instruction caching
   * Using [this](https://github.com/JaCzekanski/ps1-tests/blob/master/cpu/access-time/psx.log) as reference, implement bus waitstates
 - better DMA behaviour
 - controller input
 - interrupt handling
-- instruction caching
 - start implementing GTE
 - more GPU commands and other obscure GPU stuff
 - optimize software renderer
-  * improve performance of triangle rendering algorithm?
   * use fixed point arithmetic
   * run renderer in a different thread?
   * many other things
 - boot Crash Bandicoot
-- TTY debug output
 - web server for debugging
 - wasm port
 - savestates
