@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 const (
 	GPU_OFFSET = 0x1f801810
 	GPU_SIZE   = 8
@@ -288,6 +290,95 @@ func (gpu *GPU) Read32(address uint32) uint32 {
 	}
 
 	return 0
+}
+
+/* Nice summary here: https://psx-spx.consoledev.net/graphicsprocessingunitgpu/#gpu-command-summary */
+func (gpu *GPU) GP0(data uint32) {
+	if gpu.fifo.active {
+		gpu.fifo.Push(data)
+
+		if gpu.fifo.done {
+			switch gpu.mode {
+			case MODE_RENDERING:
+				gpu.GP0RenderPrimitive()
+			case MODE_CPUtoVRamBlit:
+				gpu.GP0DoTransferToVRAM()
+			case MODE_VramtoCPUBlit:
+				gpu.GP0DoTransferFromVRAM()
+			case MODE_FillVRam:
+				gpu.GP0FillVRam()
+			case MODE_NORMAL:
+				panic("[GPU::WriteGP0] normal mode???")
+			}
+		}
+
+		return
+	}
+
+	if gpu.mode == MODE_CPUtoVRamBlit {
+		lo := uint16(data & 0xffff)
+		hi := uint16(data >> 16)
+
+		gpu.GP0DoCPUToVramTransfer(lo)
+		gpu.GP0DoCPUToVramTransfer(hi)
+
+		gpu.wordsLeft -= 1
+
+		if gpu.wordsLeft == 0 {
+			gpu.mode = MODE_NORMAL
+		}
+
+		return
+	}
+
+	op := GetRange(data, 29, 3) // top 3 bits of a command
+
+	switch op {
+	case 0b000:
+		gpu.GP0ExecuteMiscCommand(data)
+	case 0b001:
+		gpu.GP0InitRenderPolygonCommand(data)
+	case 0b011:
+		gpu.GP0InitRenderRectangleCommand(data)
+	case 0b101:
+		gpu.GP0InitCPUToVRamBlit(data)
+	case 0b110:
+		gpu.GP0InitVramToCPUBlit(data)
+	case 0b111:
+		gpu.GP0ExecuteEnvironmentCommand(data)
+	default:
+		panic(fmt.Sprintf("[GPU::WriteGP0] Unknown command: %x", data))
+	}
+}
+
+func (gpu *GPU) GP1(data uint32) {
+	op := data >> 24 // the most significant byte determines what command
+
+	switch op {
+	case 0x00:
+		gpu.GP1Reset()
+	case 0x01:
+		gpu.GP1ResetCommandBuffer()
+	case 0x02:
+		gpu.GP1AcknowledgeInterrupt()
+	case 0x03:
+		gpu.GP1DisplayEnableSet(data)
+	case 0x04:
+		gpu.GP1DMADirectionSet(data)
+	case 0x05:
+		gpu.GP1DisplayVRamStartSet(data)
+	case 0x06:
+		gpu.GP1HorizDisplayRangeSet(data)
+	case 0x07:
+		gpu.GP1VertDisplayRangeSet(data)
+	case 0x08:
+		gpu.GP1DisplayModeSet(data)
+	case 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+		0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F:
+		gpu.GP1GPUInfo(data)
+	default:
+		panic(fmt.Sprintf("[GPU::WriteGP1] Unknown command: %x", data))
+	}
 }
 
 func (gpu *GPU) Write32(address uint32, data uint32) {

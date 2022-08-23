@@ -1,39 +1,5 @@
 package main
 
-import (
-	"fmt"
-)
-
-func (gpu *GPU) GP1(data uint32) {
-	op := data >> 24 // the most significant byte determines what command
-
-	switch op {
-	case 0x00:
-		gpu.GP1Reset()
-	case 0x01:
-		gpu.GP1ResetCommandBuffer()
-	case 0x02:
-		gpu.GP1AcknowledgeInterrupt()
-	case 0x03:
-		gpu.GP1DisplayEnableSet(data)
-	case 0x04:
-		gpu.GP1DMADirectionSet(data)
-	case 0x05:
-		gpu.GP1DisplayVRamStartSet(data)
-	case 0x06:
-		gpu.GP1HorizDisplayRangeSet(data)
-	case 0x07:
-		gpu.GP1VertDisplayRangeSet(data)
-	case 0x08:
-		gpu.GP1DisplayModeSet(data)
-	case 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
-		0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F:
-		gpu.GP1GPUInfo(data)
-	default:
-		panic(fmt.Sprintf("[GPU::WriteGP1] Unknown command: %x", data))
-	}
-}
-
 /*
 	https://psx-spx.consoledev.net/graphicsprocessingunitgpu/#gp100h-reset-gpu
 
