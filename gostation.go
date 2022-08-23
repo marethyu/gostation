@@ -65,7 +65,6 @@ func (gostation *GoStation) LoadExecutable(pathToExe string) {
 
 func (gostation *GoStation) Update() {
 	for gostation.cycles < CPU_CYCLES_PER_FRAME {
-		gostation.CheckBIOSFunctionCalls(false)
 		// gostation.CPU.Log(true)
 		gostation.Step()
 	}
@@ -73,6 +72,7 @@ func (gostation *GoStation) Update() {
 }
 
 func (gostation *GoStation) Step() {
+	gostation.CheckBIOSFunctionCalls(false)
 	gostation.CPU.Step()
 	gostation.cycles += 2
 }
