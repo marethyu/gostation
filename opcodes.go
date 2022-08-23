@@ -164,6 +164,7 @@ func (cpu *CPU) OpADDI(opcode uint32) {
 	if (a > 0 && b > math.MaxInt32-a) ||
 		(a < 0 && b < math.MinInt32-a) {
 		cpu.cop0.EnterException(EXC_OVERFLOW, "signed overflow encountered in CPU::OpADDI")
+		return
 	}
 
 	val := uint32(a + b)
@@ -755,8 +756,14 @@ func (cpu *CPU) OpJALR(opcode uint32) {
 	rd := int(GetRange(opcode, 11, 5))
 	rs := int(GetRange(opcode, 21, 5))
 
+	addr := cpu.reg(rs)
+	if addr%4 != 0 {
+		cpu.cop0.EnterException(EXC_ADDR_ERROR_LOAD, "unaligned address during jalr")
+		return
+	}
+
 	cpu.modifyReg(rd, cpu.next_pc) // store the return address in rd
-	cpu.next_pc = cpu.reg(rs)
+	cpu.next_pc = addr
 	cpu.isBranch = true
 }
 
@@ -940,6 +947,7 @@ func (cpu *CPU) OpADD(opcode uint32) {
 	if (a > 0 && b > math.MaxInt32-a) ||
 		(a < 0 && b < math.MinInt32-a) {
 		cpu.cop0.EnterException(EXC_OVERFLOW, "signed overflow encountered in CPU::OpADD")
+		return
 	}
 
 	val := uint32(a + b)
@@ -978,6 +986,7 @@ func (cpu *CPU) OpSUB(opcode uint32) {
 	if (b < 0 && a > math.MaxInt32+b) ||
 		(b > 0 && a < math.MinInt32+b) {
 		cpu.cop0.EnterException(EXC_OVERFLOW, "signed overflow encountered in CPU::OpSUB")
+		return
 	}
 
 	val := uint32(a - b)
