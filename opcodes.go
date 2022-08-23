@@ -763,12 +763,14 @@ func (cpu *CPU) OpJALR(opcode uint32) {
 
 	addr := cpu.reg(rs)
 	if addr%4 != 0 {
+		cpu.modifyReg(rd, cpu.next_pc+4) // idk why but it passes amidog's test...
 		cpu.cop0.r8 = addr
 		cpu.cop0.EnterException(EXC_ADDR_ERROR_LOAD, "unaligned address during jalr")
 		return
 	}
 
 	cpu.modifyReg(rd, cpu.next_pc) // store the return address in rd
+
 	cpu.next_pc = addr
 	cpu.isBranch = true
 }
