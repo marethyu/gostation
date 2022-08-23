@@ -16,14 +16,8 @@ func (gpu *GPU) ProcessMonochromeQuadCommand() {
 	v3 := NewVertex(gpu.fifo.buffer[3], colour, 0)
 	v4 := NewVertex(gpu.fifo.buffer[4], colour, 0)
 
-	gpu.DoRenderTriangle(v1, v2, v3, 0, 0, 0, 0, 0, gpu.semiTransparency, gpu.shape_attr)
-
-	area := Edge(v2.x, v2.y, v4.x, v4.y, v3.x, v3.y)
-	if area < 0 {
-		gpu.DoRenderTriangle(v2, v4, v3, 0, 0, 0, 0, 0, gpu.semiTransparency, gpu.shape_attr)
-	} else {
-		gpu.DoRenderTriangle(v2, v3, v4, 0, 0, 0, 0, 0, gpu.semiTransparency, gpu.shape_attr)
-	}
+	gpu.DoRenderTriangle(v1, v2, v3, 0, 0, 0, 0, 0, gpu.semiTransparency, gpu.shape_attr, false)
+	gpu.DoRenderTriangle(v2, v3, v4, 0, 0, 0, 0, 0, gpu.semiTransparency, gpu.shape_attr, true)
 }
 
 func (gpu *GPU) ProcessShadedQuadCommand() {
@@ -32,14 +26,8 @@ func (gpu *GPU) ProcessShadedQuadCommand() {
 	v3 := NewVertex(gpu.fifo.buffer[5], gpu.fifo.buffer[4], 0)
 	v4 := NewVertex(gpu.fifo.buffer[7], gpu.fifo.buffer[6], 0)
 
-	gpu.DoRenderTriangle(v1, v2, v3, 0, 0, 0, 0, 0, gpu.semiTransparency, gpu.shape_attr)
-
-	area := Edge(v2.x, v2.y, v4.x, v4.y, v3.x, v3.y)
-	if area < 0 {
-		gpu.DoRenderTriangle(v2, v4, v3, 0, 0, 0, 0, 0, gpu.semiTransparency, gpu.shape_attr)
-	} else {
-		gpu.DoRenderTriangle(v2, v3, v4, 0, 0, 0, 0, 0, gpu.semiTransparency, gpu.shape_attr)
-	}
+	gpu.DoRenderTriangle(v1, v2, v3, 0, 0, 0, 0, 0, gpu.semiTransparency, gpu.shape_attr, false)
+	gpu.DoRenderTriangle(v2, v3, v4, 0, 0, 0, 0, 0, gpu.semiTransparency, gpu.shape_attr, true)
 }
 
 func (gpu *GPU) ProcessTexturedQuadCommand() {
@@ -67,14 +55,8 @@ func (gpu *GPU) ProcessTexturedQuadCommand() {
 		panic("[GPU::ProcessTexturedQuadCommand] reserved texture format")
 	}
 
-	gpu.DoRenderTriangle(v1, v2, v3, clutX, clutY, texPageUBase, texPageVBase, texFormat, stMode, gpu.shape_attr)
-
-	area := Edge(v2.x, v2.y, v4.x, v4.y, v3.x, v3.y)
-	if area < 0 {
-		gpu.DoRenderTriangle(v2, v4, v3, clutX, clutY, texPageUBase, texPageVBase, texFormat, stMode, gpu.shape_attr)
-	} else {
-		gpu.DoRenderTriangle(v2, v3, v4, clutX, clutY, texPageUBase, texPageVBase, texFormat, stMode, gpu.shape_attr)
-	}
+	gpu.DoRenderTriangle(v1, v2, v3, clutX, clutY, texPageUBase, texPageVBase, texFormat, stMode, gpu.shape_attr, false)
+	gpu.DoRenderTriangle(v2, v3, v4, clutX, clutY, texPageUBase, texPageVBase, texFormat, stMode, gpu.shape_attr, true)
 }
 
 func (gpu *GPU) ProcessTexturedShadedQuadCommand() {
@@ -100,14 +82,8 @@ func (gpu *GPU) ProcessTexturedShadedQuadCommand() {
 		panic("[GPU::ProcessTexturedShadedQuadCommand] reserved texture format")
 	}
 
-	gpu.DoRenderTriangle(v1, v2, v3, clutX, clutY, texPageUBase, texPageVBase, texFormat, stMode, gpu.shape_attr)
-
-	area := Edge(v2.x, v2.y, v4.x, v4.y, v3.x, v3.y)
-	if area < 0 {
-		gpu.DoRenderTriangle(v2, v4, v3, clutX, clutY, texPageUBase, texPageVBase, texFormat, stMode, gpu.shape_attr)
-	} else {
-		gpu.DoRenderTriangle(v2, v3, v4, clutX, clutY, texPageUBase, texPageVBase, texFormat, stMode, gpu.shape_attr)
-	}
+	gpu.DoRenderTriangle(v1, v2, v3, clutX, clutY, texPageUBase, texPageVBase, texFormat, stMode, gpu.shape_attr, false)
+	gpu.DoRenderTriangle(v2, v3, v4, clutX, clutY, texPageUBase, texPageVBase, texFormat, stMode, gpu.shape_attr, true)
 }
 
 func (gpu *GPU) ProcessMonochromeTrigCommand() {
@@ -117,12 +93,7 @@ func (gpu *GPU) ProcessMonochromeTrigCommand() {
 	v2 := NewVertex(gpu.fifo.buffer[2], colour, 0)
 	v3 := NewVertex(gpu.fifo.buffer[3], colour, 0)
 
-	area := Edge(v1.x, v1.y, v3.x, v3.y, v2.x, v2.y)
-	if area < 0 {
-		gpu.DoRenderTriangle(v1, v3, v2, 0, 0, 0, 0, 0, gpu.semiTransparency, gpu.shape_attr)
-	} else {
-		gpu.DoRenderTriangle(v1, v2, v3, 0, 0, 0, 0, 0, gpu.semiTransparency, gpu.shape_attr)
-	}
+	gpu.DoRenderTriangle(v1, v2, v3, 0, 0, 0, 0, 0, gpu.semiTransparency, gpu.shape_attr, true)
 }
 
 func (gpu *GPU) ProcessShadedTrigCommand() {
@@ -130,12 +101,7 @@ func (gpu *GPU) ProcessShadedTrigCommand() {
 	v2 := NewVertex(gpu.fifo.buffer[3], gpu.fifo.buffer[2], 0)
 	v3 := NewVertex(gpu.fifo.buffer[5], gpu.fifo.buffer[4], 0)
 
-	area := Edge(v1.x, v1.y, v3.x, v3.y, v2.x, v2.y)
-	if area < 0 {
-		gpu.DoRenderTriangle(v1, v3, v2, 0, 0, 0, 0, 0, gpu.semiTransparency, gpu.shape_attr)
-	} else {
-		gpu.DoRenderTriangle(v1, v2, v3, 0, 0, 0, 0, 0, gpu.semiTransparency, gpu.shape_attr)
-	}
+	gpu.DoRenderTriangle(v1, v2, v3, 0, 0, 0, 0, 0, gpu.semiTransparency, gpu.shape_attr, true)
 }
 
 func (gpu *GPU) ProcessTexturedTrigCommand() {
@@ -162,12 +128,7 @@ func (gpu *GPU) ProcessTexturedTrigCommand() {
 		panic("[GPU::ProcessTexturedTrigCommand] reserved texture format")
 	}
 
-	area := Edge(v1.x, v1.y, v3.x, v3.y, v2.x, v2.y)
-	if area < 0 {
-		gpu.DoRenderTriangle(v1, v3, v2, clutX, clutY, texPageUBase, texPageVBase, texFormat, stMode, gpu.shape_attr)
-	} else {
-		gpu.DoRenderTriangle(v1, v2, v3, clutX, clutY, texPageUBase, texPageVBase, texFormat, stMode, gpu.shape_attr)
-	}
+	gpu.DoRenderTriangle(v1, v2, v3, clutX, clutY, texPageUBase, texPageVBase, texFormat, stMode, gpu.shape_attr, true)
 }
 
 func (gpu *GPU) ProcessTexturedShadedTrigCommand() {
@@ -192,18 +153,20 @@ func (gpu *GPU) ProcessTexturedShadedTrigCommand() {
 		panic("[GPU::ProcessTexturedShadedTrigCommand] reserved texture format")
 	}
 
-	area := Edge(v1.x, v1.y, v3.x, v3.y, v2.x, v2.y)
-	if area < 0 {
-		gpu.DoRenderTriangle(v1, v3, v2, clutX, clutY, texPageUBase, texPageVBase, texFormat, stMode, gpu.shape_attr)
-	} else {
-		gpu.DoRenderTriangle(v1, v2, v3, clutX, clutY, texPageUBase, texPageVBase, texFormat, stMode, gpu.shape_attr)
-	}
+	gpu.DoRenderTriangle(v1, v2, v3, clutX, clutY, texPageUBase, texPageVBase, texFormat, stMode, gpu.shape_attr, true)
 }
 
 /*
 Note: v1, v2, and v3 must be in clockwise order
 */
-func (gpu *GPU) DoRenderTriangle(v1, v2, v3 *Vertex, clutX, clutY, texPageUBase, texPageVBase, texFormat, stMode int, attr uint32) {
+func (gpu *GPU) DoRenderTriangle(v1, v2, v3 *Vertex, clutX, clutY, texPageUBase, texPageVBase, texFormat, stMode int, attr uint32, ccw bool) {
+	area := Edge(v1.x, v1.y, v3.x, v3.y, v2.x, v2.y)
+	if ccw && area < 0 {
+		// negative area! let's swap vertexes (but sometimes accept negative area...)
+		v2, v3 = v3, v2
+	}
+	area = Edge(v1.x, v1.y, v3.x, v3.y, v2.x, v2.y)
+
 	isRawTexture := TestBit(attr, PATTR_RAW_TEXTURE)
 	isSemiTransparent := TestBit(attr, PATTR_SEMI_TRANSPARENT)
 	isTexture := TestBit(attr, PATTR_TEXTURE)
@@ -229,12 +192,6 @@ func (gpu *GPU) DoRenderTriangle(v1, v2, v3 *Vertex, clutX, clutY, texPageUBase,
 	incY23 := v3.x - v2.x
 	incY31 := v1.x - v3.x
 	incY12 := v2.x - v1.x
-
-	area := Edge(v1.x, v1.y, v3.x, v3.y, v2.x, v2.y)
-
-	if area < 0 {
-		panic("[GPU::DoRenderTriangle] negative area!")
-	}
 
 	for y := ymin; y <= ymax; y += 1 {
 		w1 := w1Row
