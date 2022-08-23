@@ -79,6 +79,7 @@ type Bus struct {
 	ScratchPad     Access
 	MemoryControl1 *MemoryControl1
 	SPU            Access
+	Peripheral     Access /* TODO */
 	Timer          Access /* TODO */
 	CDROM          Access /* TODO */
 	Expansion1     Access
@@ -98,6 +99,7 @@ func NewBus(core *GoStation, pathToBios string) *Bus {
 		NewMemory(make([]uint8, 0x400), 0x1f800000, 0x400),
 		NewMemoryControl1(),
 		NewMemory(make([]uint8, 640), 0x1f801c00, 640),
+		NewMemory(make([]uint8, 32), 0x1f801040, 32),
 		NewMemory(make([]uint8, 3*16), 0x1f801100, 3*16),
 		NewMemory(make([]uint8, 4), 0x1f801800, 4),
 		NewMemory(make([]uint8, 1024*512), 0x1f000000, 1024*512),
@@ -122,6 +124,10 @@ func (bus *Bus) Read8(address uint32) uint8 {
 
 	if bus.SPU.Contains(address) {
 		return bus.SPU.Read8(address)
+	}
+
+	if bus.Peripheral.Contains(address) {
+		return bus.Peripheral.Read8(address)
 	}
 
 	if bus.CDROM.Contains(address) {
@@ -156,6 +162,10 @@ func (bus *Bus) Read16(address uint32) uint16 {
 
 	if bus.SPU.Contains(address) {
 		return bus.SPU.Read16(address)
+	}
+
+	if bus.Peripheral.Contains(address) {
+		return bus.Peripheral.Read16(address)
 	}
 
 	if bus.Timer.Contains(address) {
@@ -194,6 +204,10 @@ func (bus *Bus) Read32(address uint32) uint32 {
 
 	if bus.SPU.Contains(address) {
 		return bus.SPU.Read32(address)
+	}
+
+	if bus.Peripheral.Contains(address) {
+		return bus.Peripheral.Read32(address)
 	}
 
 	if bus.Timer.Contains(address) {
@@ -245,6 +259,11 @@ func (bus *Bus) Write8(address uint32, data uint8) {
 		return
 	}
 
+	if bus.Peripheral.Contains(address) {
+		bus.Peripheral.Write8(address, data)
+		return
+	}
+
 	if bus.CDROM.Contains(address) {
 		return
 	}
@@ -277,6 +296,11 @@ func (bus *Bus) Write16(address uint32, data uint16) {
 
 	if bus.SPU.Contains(address) {
 		bus.SPU.Write16(address, data)
+		return
+	}
+
+	if bus.Peripheral.Contains(address) {
+		bus.Peripheral.Write16(address, data)
 		return
 	}
 
@@ -323,6 +347,11 @@ func (bus *Bus) Write32(address uint32, data uint32) {
 
 	if bus.SPU.Contains(address) {
 		bus.SPU.Write32(address, data)
+		return
+	}
+
+	if bus.Peripheral.Contains(address) {
+		bus.Peripheral.Write32(address, data)
 		return
 	}
 
