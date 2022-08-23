@@ -72,7 +72,7 @@ func (dma *DMA) DoDMATransfer(port int) {
 				addr = (addr + 4) & mask
 				command := dma.Core.Bus.Ram.Read32(addr)
 
-				dma.Core.GPU.WriteGP0(command)
+				dma.Core.GPU.GP0(command)
 
 				size -= 1
 			}
@@ -104,7 +104,7 @@ func (dma *DMA) DoDMATransfer(port int) {
 
 				switch port {
 				case DMA2_GPU:
-					dma.Core.GPU.WriteGP0(data)
+					dma.Core.GPU.GP0(data)
 				default:
 					panic(fmt.Sprintf("[DMA::DoDMATransfer] unsupported port (%d) during ram to device block copy", port))
 				}

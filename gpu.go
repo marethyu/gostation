@@ -43,6 +43,7 @@ const (
 
 const (
 	PRIMITIVE_POLYGON = iota
+	PRIMITIVE_RECTANGLE
 )
 
 /* whut the forking fock why itz long */
@@ -56,17 +57,17 @@ type GPU struct {
 	*/
 
 	/* 1F801814h - GPUSTAT - GPU Status Register (R) */
-	txBase             uint32 /* 0-3   Texture page X Base   (N*64)                              ;GP0(E1h).0-3 */
-	tyBase             uint32 /* 4     Texture page Y Base   (N*256) (ie. 0 or 256)              ;GP0(E1h).4 */
-	semiTransparency   uint8  /* 5-6   Semi Transparency     (0=B/2+F/2, 1=B+F, 2=B-F, 3=B+F/4)  ;GP0(E1h).5-6 */
-	textureFormat      uint8  /* 7-8   Texture page colors   (0=4bit, 1=8bit, 2=15bit, 3=Reserved)GP0(E1h).7-8 */
-	dilthering         bool   /* 9     Dither 24bit to 15bit (0=Off/strip LSBs, 1=Dither Enabled);GP0(E1h).9 */
-	drawToDisplay      bool   /* 10    Drawing to display area (0=Prohibited, 1=Allowed)         ;GP0(E1h).10 */
-	setMaskBit         bool   /* 11    Set Mask-bit when drawing pixels (0=No, 1=Yes/Mask)       ;GP0(E6h).0 */
-	drawUnmaskedPixels bool   /* 12    Draw Pixels           (0=Always, 1=Not to Masked areas)   ;GP0(E6h).1 */
-	interlace          bool   /* 13    Interlace Field       (or, always 1 when GP1(08h).5=0) */
-	reverseFlag        bool   /* 14    "Reverseflag"         (0=Normal, 1=Distorted)             ;GP1(08h).7 */
-	textureDisable     bool   /* 15    Texture Disable       (0=Normal, 1=Disable Textures)      ;GP0(E1h).11 */
+	txBase             int  /* 0-3   Texture page X Base   (N*64)                              ;GP0(E1h).0-3 */
+	tyBase             int  /* 4     Texture page Y Base   (N*256) (ie. 0 or 256)              ;GP0(E1h).4 */
+	semiTransparency   int  /* 5-6   Semi Transparency     (0=B/2+F/2, 1=B+F, 2=B-F, 3=B+F/4)  ;GP0(E1h).5-6 */
+	textureFormat      int  /* 7-8   Texture page colors   (0=4bit, 1=8bit, 2=15bit, 3=Reserved)GP0(E1h).7-8 */
+	dilthering         bool /* 9     Dither 24bit to 15bit (0=Off/strip LSBs, 1=Dither Enabled);GP0(E1h).9 */
+	drawToDisplay      bool /* 10    Drawing to display area (0=Prohibited, 1=Allowed)         ;GP0(E1h).10 */
+	setMaskBit         bool /* 11    Set Mask-bit when drawing pixels (0=No, 1=Yes/Mask)       ;GP0(E6h).0 */
+	drawUnmaskedPixels bool /* 12    Draw Pixels           (0=Always, 1=Not to Masked areas)   ;GP0(E6h).1 */
+	interlace          bool /* 13    Interlace Field       (or, always 1 when GP1(08h).5=0) */
+	reverseFlag        bool /* 14    "Reverseflag"         (0=Normal, 1=Distorted)             ;GP1(08h).7 */
+	textureDisable     bool /* 15    Texture Disable       (0=Normal, 1=Disable Textures)      ;GP0(E1h).11 */
 	/* hr2 16    Horizontal Resolution 2     (0=256/320/512/640, 1=368)    ;GP1(08h).6
 	   hr1 17-18 Horizontal Resolution 1     (0=256, 1=320, 2=512, 3=640)  ;GP1(08h).0-1 */
 	hr2                bool
@@ -87,45 +88,45 @@ type GPU struct {
 		When GP1(04h)=3 ---> Same as GPUSTAT.27
 	*/
 	dma             bool
-	readyReceiveCmd bool  /* 26    Ready to receive Cmd Word   (0=No, 1=Ready)  ;GP0(...) ;via GP0 */
-	readySendVRam   bool  /* 27    Ready to send VRAM to CPU   (0=No, 1=Ready)  ;GP0(C0h) ;via GPUREAD */
-	readyReceiveDMA bool  /* 28    Ready to receive DMA Block  (0=No, 1=Ready)  ;GP0(...) ;via GP0 */
-	dmaDirection    uint8 /* 29-30 DMA Direction (0=Off, 1=?, 2=CPUtoGP0, 3=GPUREADtoCPU)    ;GP1(04h).0-1 */
-	interlaceOdd    bool  /* 31    Drawing even/odd lines in interlace mode (0=Even or Vblank, 1=Odd) */
+	readyReceiveCmd bool /* 26    Ready to receive Cmd Word   (0=No, 1=Ready)  ;GP0(...) ;via GP0 */
+	readySendVRam   bool /* 27    Ready to send VRAM to CPU   (0=No, 1=Ready)  ;GP0(C0h) ;via GPUREAD */
+	readyReceiveDMA bool /* 28    Ready to receive DMA Block  (0=No, 1=Ready)  ;GP0(...) ;via GP0 */
+	dmaDirection    int  /* 29-30 DMA Direction (0=Off, 1=?, 2=CPUtoGP0, 3=GPUREADtoCPU)    ;GP1(04h).0-1 */
+	interlaceOdd    bool /* 31    Drawing even/odd lines in interlace mode (0=Even or Vblank, 1=Odd) */
 
 	/* GP0(E1h) - Draw Mode setting (aka "Texpage") */
 	rectTextureXFlip bool /* mirror texture rectangle along the x-axis    ;GP0(E1h).12 */
 	rectTextureYFlip bool /* mirror texture rectangle along the y-axis    ;GP0(E1h).13 */
 
 	/* GP0(E2h) - Texture Window setting */
-	texWindowMaskX   uint32 /* 0-4    Texture window Mask X   (in 8 pixel steps) */
-	texWindowMaskY   uint32 /* 5-9    Texture window Mask Y   (in 8 pixel steps) */
-	texWindowOffsetX uint32 /* 10-14  Texture window Offset X (in 8 pixel steps) */
-	texWindowOffsetY uint32 /* 15-19  Texture window Offset Y (in 8 pixel steps) */
+	texWindowMaskX   int /* 0-4    Texture window Mask X   (in 8 pixel steps) */
+	texWindowMaskY   int /* 5-9    Texture window Mask Y   (in 8 pixel steps) */
+	texWindowOffsetX int /* 10-14  Texture window Offset X (in 8 pixel steps) */
+	texWindowOffsetY int /* 15-19  Texture window Offset Y (in 8 pixel steps) */
 
 	/* GP0(E3h) - Set Drawing Area top left (X1,Y1) */
-	drawingAreaX1 uint32 /* 0-9    X-coordinate (0..1023) */
-	drawingAreaY1 uint32 /* 10-18  Y-coordinate (0..511) or 10-19  Y-coordinate (0..1023)? */
+	drawingAreaX1 int /* 0-9    X-coordinate (0..1023) */
+	drawingAreaY1 int /* 10-18  Y-coordinate (0..511) or 10-19  Y-coordinate (0..1023)? */
 
 	/* GP0(E4h) - Set Drawing Area bottom right (X2,Y2) */
-	drawingAreaX2 uint32
-	drawingAreaY2 uint32
+	drawingAreaX2 int
+	drawingAreaY2 int
 
 	/* GP0(E5h) - Set Drawing Offset (X,Y) */
-	drawingXOffset int32 /* 0-10   X-offset (-1024..+1023) (usually within X1,X2 of Drawing Area) */
-	drawingYOffset int32 /* 11-21  Y-offset (-1024..+1023) (usually within Y1,Y2 of Drawing Area) */
+	drawingXOffset int /* 0-10   X-offset (-1024..+1023) (usually within X1,X2 of Drawing Area) */
+	drawingYOffset int /* 11-21  Y-offset (-1024..+1023) (usually within Y1,Y2 of Drawing Area) */
 
 	/* GP1(05h) - Start of Display area (in VRAM) */
-	displayVramStartX uint32 /* 0-9   X (0-1023)    (halfword address in VRAM)  (relative to begin of VRAM) */
-	displayVramStartY uint32 /* 10-18 Y (0-511)     (scanline number in VRAM)   (relative to begin of VRAM) */
+	displayVramStartX int /* 0-9   X (0-1023)    (halfword address in VRAM)  (relative to begin of VRAM) */
+	displayVramStartY int /* 10-18 Y (0-511)     (scanline number in VRAM)   (relative to begin of VRAM) */
 
 	/* GP1(06h) - Horizontal Display range (on Screen) */
-	displayHorizX1 uint32 /* 0-11   X1 (260h+0)       ;12bit       ;\counted in video clock units, */
-	displayHorizX2 uint32 /* 12-23  X2 (260h+320*8)   ;12bit       ;/relative to HSYNC */
+	displayHorizX1 int /* 0-11   X1 (260h+0)       ;12bit       ;\counted in video clock units, */
+	displayHorizX2 int /* 12-23  X2 (260h+320*8)   ;12bit       ;/relative to HSYNC */
 
 	/* GP1(07h) - Vertical Display range (on Screen) */
-	displayVertY1 uint32 /* 0-9   Y1 (NTSC=88h-(240/2), (PAL=A3h-(288/2))  ;\scanline numbers on screen, */
-	displayVertY2 uint32 /* 10-19 Y2 (NTSC=88h+(240/2), (PAL=A3h+(288/2))  ;/relative to VSYNC */
+	displayVertY1 int /* 0-9   Y1 (NTSC=88h-(240/2), (PAL=A3h-(288/2))  ;\scanline numbers on screen, */
+	displayVertY2 int /* 10-19 Y2 (NTSC=88h+(240/2), (PAL=A3h+(288/2))  ;/relative to VSYNC */
 
 	vram *VRAM
 
@@ -292,19 +293,8 @@ func (gpu *GPU) Read32(address uint32) uint32 {
 func (gpu *GPU) Write32(address uint32, data uint32) {
 	switch address {
 	case 0x1f801810:
-		gpu.WriteGP0(data)
+		gpu.GP0(data)
 	case 0x1f801814:
-		gpu.WriteGP1(data)
+		gpu.GP1(data)
 	}
-}
-
-func (gpu *GPU) PutPixel(x, y, r, g, b int, m bool) {
-	var colour uint32 = 0
-
-	PackRange(&colour, 0, uint32(r>>3), 5)
-	PackRange(&colour, 5, uint32(g>>3), 5)
-	PackRange(&colour, 10, uint32(b>>3), 5)
-	ModifyBit(&colour, 15, gpu.setMaskBit || m)
-
-	gpu.vram.Write16(x, y, uint16(colour))
 }

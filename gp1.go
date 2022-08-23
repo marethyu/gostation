@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-func (gpu *GPU) WriteGP1(data uint32) {
+func (gpu *GPU) GP1(data uint32) {
 	op := data >> 24 // the most significant byte determines what command
 
 	switch op {
@@ -118,7 +118,7 @@ func (gpu *GPU) GP1DisplayEnableSet(data uint32) {
 2-23 Not used (zero)
 */
 func (gpu *GPU) GP1DMADirectionSet(data uint32) {
-	gpu.dmaDirection = uint8(GetRange(data, 0, 2))
+	gpu.dmaDirection = int(GetRange(data, 0, 2))
 }
 
 /*
@@ -129,8 +129,8 @@ func (gpu *GPU) GP1DMADirectionSet(data uint32) {
 19-23 Not used (zero)
 */
 func (gpu *GPU) GP1DisplayVRamStartSet(data uint32) {
-	gpu.displayVramStartX = GetRange(data, 0, 10) & 0b1111111110 // ignore the LSB to align with 16 bit pixels
-	gpu.displayVramStartY = GetRange(data, 10, 9)
+	gpu.displayVramStartX = int(GetRange(data, 0, 10) & 0b1111111110) // ignore the LSB to align with 16 bit pixels
+	gpu.displayVramStartY = int(GetRange(data, 10, 9))
 }
 
 /*
@@ -140,8 +140,8 @@ func (gpu *GPU) GP1DisplayVRamStartSet(data uint32) {
 12-23  X2 (260h+320*8)   ;12bit       ;/relative to HSYNC
 */
 func (gpu *GPU) GP1HorizDisplayRangeSet(data uint32) {
-	gpu.displayHorizX1 = GetRange(data, 0, 12)
-	gpu.displayHorizX2 = GetRange(data, 12, 12)
+	gpu.displayHorizX1 = int(GetRange(data, 0, 12))
+	gpu.displayHorizX2 = int(GetRange(data, 12, 12))
 }
 
 /*
@@ -152,8 +152,8 @@ func (gpu *GPU) GP1HorizDisplayRangeSet(data uint32) {
 20-23 Not used (zero)
 */
 func (gpu *GPU) GP1VertDisplayRangeSet(data uint32) {
-	gpu.displayVertY1 = GetRange(data, 0, 10)
-	gpu.displayVertY2 = GetRange(data, 10, 10)
+	gpu.displayVertY1 = int(GetRange(data, 0, 10))
+	gpu.displayVertY2 = int(GetRange(data, 10, 10))
 }
 
 /*
@@ -225,18 +225,18 @@ func (gpu *GPU) GP1DisplayModeSet(data uint32) {
 func (gpu *GPU) GP1GPUInfo(data uint32) {
 	switch data & 0xf {
 	case 0x2:
-		PackRange(&gpu.gpuReadVal, 0, gpu.texWindowMaskX, 5)
-		PackRange(&gpu.gpuReadVal, 5, gpu.texWindowMaskY, 5)
-		PackRange(&gpu.gpuReadVal, 10, gpu.texWindowOffsetX, 5)
-		PackRange(&gpu.gpuReadVal, 15, gpu.texWindowOffsetY, 5)
+		PackRange(&gpu.gpuReadVal, 0, uint32(gpu.texWindowMaskX), 5)
+		PackRange(&gpu.gpuReadVal, 5, uint32(gpu.texWindowMaskY), 5)
+		PackRange(&gpu.gpuReadVal, 10, uint32(gpu.texWindowOffsetX), 5)
+		PackRange(&gpu.gpuReadVal, 15, uint32(gpu.texWindowOffsetY), 5)
 		PackRange(&gpu.gpuReadVal, 20, 0, 12)
 	case 0x3:
-		PackRange(&gpu.gpuReadVal, 0, gpu.drawingAreaX1, 10)
-		PackRange(&gpu.gpuReadVal, 10, gpu.drawingAreaY1, 10)
+		PackRange(&gpu.gpuReadVal, 0, uint32(gpu.drawingAreaX1), 10)
+		PackRange(&gpu.gpuReadVal, 10, uint32(gpu.drawingAreaY1), 10)
 		PackRange(&gpu.gpuReadVal, 20, 0, 12)
 	case 0x4:
-		PackRange(&gpu.gpuReadVal, 0, gpu.drawingAreaX2, 10)
-		PackRange(&gpu.gpuReadVal, 10, gpu.drawingAreaY2, 10)
+		PackRange(&gpu.gpuReadVal, 0, uint32(gpu.drawingAreaX2), 10)
+		PackRange(&gpu.gpuReadVal, 10, uint32(gpu.drawingAreaY2), 10)
 		PackRange(&gpu.gpuReadVal, 20, 0, 12)
 	case 0x5:
 		PackRange(&gpu.gpuReadVal, 0, uint32(gpu.drawingXOffset), 11)

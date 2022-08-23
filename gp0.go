@@ -5,7 +5,7 @@ import (
 )
 
 /* Nice summary here: https://psx-spx.consoledev.net/graphicsprocessingunitgpu/#gpu-command-summary */
-func (gpu *GPU) WriteGP0(data uint32) {
+func (gpu *GPU) GP0(data uint32) {
 	if gpu.fifo.active {
 		gpu.fifo.Push(data)
 
@@ -50,6 +50,8 @@ func (gpu *GPU) WriteGP0(data uint32) {
 		gpu.GP0ExecuteMiscCommand(data)
 	case 0b001:
 		gpu.GP0InitRenderPolygonCommand(data)
+	case 0b011:
+		gpu.GP0InitRenderRectangleCommand(data)
 	case 0b101:
 		gpu.GP0InitCPUToVRamBlit(data)
 	case 0b110:
@@ -116,6 +118,38 @@ func (gpu *GPU) GP0InitRenderPolygonCommand(cmd uint32) {
 	gpu.mode = MODE_RENDERING
 	gpu.fifo.Init(narg)
 	gpu.fifo.Push(cmd) // the initial command can be treated as the first argument
+}
+
+/*
+Format for rectangle command:
+
+	bit number   value   meaning
+	 31-29        011    rectangle render
+	 28-27        sss    rectangle size
+	   26         1/0    textured / untextured
+	   25         1/0    semi transparent / solid
+	   24         1/0    raw texture / texture blending
+	  23-0        rgb    first color value.
+*/
+func (gpu *GPU) GP0InitRenderRectangleCommand(cmd uint32) {
+	gpu.shape = PRIMITIVE_RECTANGLE
+	gpu.shape_attr = GetRange(cmd, 24, 5)
+
+	narg := 2
+
+	if TestBit(cmd, 26) {
+		// textured
+		narg += 1
+	}
+
+	if GetRange(cmd, 27, 2) == 0 {
+		// variable sized
+		narg += 1
+	}
+
+	gpu.mode = MODE_RENDERING
+	gpu.fifo.Init(narg)
+	gpu.fifo.Push(cmd)
 }
 
 /*
@@ -232,10 +266,10 @@ func (gpu *GPU) GP0ExecuteEnvironmentCommand(cmd uint32) {
 24-31 Command  (E1h)
 */
 func (gpu *GPU) GP0DrawModeSet(data uint32) {
-	gpu.txBase = GetRange(data, 0, 4)
-	gpu.tyBase = GetRange(data, 4, 1)
-	gpu.semiTransparency = uint8(GetRange(data, 5, 2))
-	gpu.textureFormat = uint8(GetRange(data, 7, 2))
+	gpu.txBase = int(GetRange(data, 0, 4))
+	gpu.tyBase = int(GetRange(data, 4, 1))
+	gpu.semiTransparency = int(GetRange(data, 5, 2))
+	gpu.textureFormat = int(GetRange(data, 7, 2))
 	gpu.dilthering = TestBit(data, 9)
 	gpu.drawToDisplay = TestBit(data, 10)
 	gpu.textureDisable = TestBit(data, 11)
@@ -254,10 +288,10 @@ func (gpu *GPU) GP0DrawModeSet(data uint32) {
 24-31  Command  (E2h)
 */
 func (gpu *GPU) GP0TextureWindowSetup(data uint32) {
-	gpu.texWindowMaskX = GetRange(data, 0, 5)
-	gpu.texWindowMaskY = GetRange(data, 5, 5)
-	gpu.texWindowOffsetX = GetRange(data, 10, 5)
-	gpu.texWindowOffsetY = GetRange(data, 15, 5)
+	gpu.texWindowMaskX = int(GetRange(data, 0, 5))
+	gpu.texWindowMaskY = int(GetRange(data, 5, 5))
+	gpu.texWindowOffsetX = int(GetRange(data, 10, 5))
+	gpu.texWindowOffsetY = int(GetRange(data, 15, 5))
 }
 
 /*
@@ -271,8 +305,8 @@ func (gpu *GPU) GP0TextureWindowSetup(data uint32) {
 24-31  Command  (Exh)
 */
 func (gpu *GPU) GP0DrawingAreaTopLeftSet(data uint32) {
-	gpu.drawingAreaX1 = GetRange(data, 0, 10)
-	gpu.drawingAreaY1 = GetRange(data, 10, 10)
+	gpu.drawingAreaX1 = int(GetRange(data, 0, 10))
+	gpu.drawingAreaY1 = int(GetRange(data, 10, 10))
 }
 
 /*
@@ -286,8 +320,8 @@ func (gpu *GPU) GP0DrawingAreaTopLeftSet(data uint32) {
 24-31  Command  (Exh)
 */
 func (gpu *GPU) GP0DrawingAreaBottomRightSet(data uint32) {
-	gpu.drawingAreaX2 = GetRange(data, 0, 10)
-	gpu.drawingAreaY2 = GetRange(data, 10, 10)
+	gpu.drawingAreaX2 = int(GetRange(data, 0, 10))
+	gpu.drawingAreaY2 = int(GetRange(data, 10, 10))
 }
 
 /*
@@ -302,8 +336,8 @@ func (gpu *GPU) GP0DrawingOffsetSet(data uint32) {
 	x := uint16(GetRange(data, 0, 11))
 	y := uint16(GetRange(data, 11, 11))
 
-	gpu.drawingXOffset = int32(ForceSignExtension16(x, 11))
-	gpu.drawingYOffset = int32(ForceSignExtension16(y, 11))
+	gpu.drawingXOffset = int(ForceSignExtension16(x, 11))
+	gpu.drawingYOffset = int(ForceSignExtension16(y, 11))
 }
 
 /*
@@ -323,6 +357,8 @@ func (gpu *GPU) GP0RenderPrimitive() {
 	switch gpu.shape {
 	case PRIMITIVE_POLYGON:
 		gpu.ProcessPolygonCommand()
+	case PRIMITIVE_RECTANGLE:
+		gpu.ProcessRectangleCommand()
 	}
 
 	gpu.fifo.Done()
@@ -408,8 +444,8 @@ func (gpu *GPU) GP0FillVRam() {
 
 	for y := 0; y < height; y += 1 {
 		for x := 0; x < width; x += 1 {
-			xpos := (((startX + x) % VRAM_WIDTH) + VRAM_WIDTH) % VRAM_WIDTH
-			ypos := (((startY + y) % VRAM_HEIGHT) + VRAM_HEIGHT) % VRAM_HEIGHT
+			xpos := Modulo(startX+x, VRAM_WIDTH)
+			ypos := Modulo(startY+y, VRAM_HEIGHT)
 			gpu.vram.Write16(xpos, ypos, uint16(colour))
 		}
 	}

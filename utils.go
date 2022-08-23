@@ -83,6 +83,10 @@ func Clamp8(v int) int {
 	return v
 }
 
+func Modulo(x, y int) int {
+	return ((x % y) + y) % y
+}
+
 func IsTopLeft(v1, v2 *Vertex) bool {
 	// is edge top (perfectly horizontal and points to right) or left (leans to left side)?
 	return (v1.y == v2.y && v1.x < v2.x) || (v1.y > v2.y)
