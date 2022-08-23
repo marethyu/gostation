@@ -9,13 +9,16 @@ TODO:
   * also find how out to get out of a infinite loop after boot logo get displayed
 - CDROM
 - timers
+- CPU
+  * pass amidog's psx_cpu test
+  * fix issues with load delay slots??
+  * GTE coprocessor
 - timing
   * instruction caching
   * Using [this](https://github.com/JaCzekanski/ps1-tests/blob/master/cpu/access-time/psx.log) as reference, implement bus waitstates
 - better DMA behaviour
 - controller input
 - interrupt handling
-- start implementing GTE
 - more GPU commands and other obscure GPU stuff
 - optimize software renderer
   * use fixed point arithmetic
