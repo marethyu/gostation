@@ -317,6 +317,7 @@ func (cpu *CPU) OpLoadHWord(opcode uint32) {
 
 	// addresses must be 16 bit aligned
 	if addr%2 != 0 {
+		cpu.cop0.r8 = addr
 		cpu.cop0.EnterException(EXC_ADDR_ERROR_LOAD, "unaligned address during lh")
 	} else {
 		val := SignExtendedHWord(cpu.Core.Bus.Read16(addr))
@@ -415,6 +416,7 @@ func (cpu *CPU) OpLoadWord(opcode uint32) {
 
 	// addresses must be 32 bit aligned
 	if addr%4 != 0 {
+		cpu.cop0.r8 = addr
 		cpu.cop0.EnterException(EXC_ADDR_ERROR_LOAD, "unaligned address during lw")
 	} else {
 		val := cpu.Core.Bus.Read32(addr)
@@ -454,6 +456,7 @@ func (cpu *CPU) OpLoadHWordU(opcode uint32) {
 
 	// addresses must be 16 bit aligned
 	if addr%2 != 0 {
+		cpu.cop0.r8 = addr
 		cpu.cop0.EnterException(EXC_ADDR_ERROR_LOAD, "unaligned address during lhu")
 	} else {
 		val := cpu.Core.Bus.Read16(addr)
@@ -540,6 +543,7 @@ func (cpu *CPU) OpStoreHWord(opcode uint32) {
 
 	// addresses must be 16 bit aligned
 	if addr%2 != 0 {
+		cpu.cop0.r8 = addr
 		cpu.cop0.EnterException(EXC_ADDR_ERROR_STORE, "unaligned address during sh")
 	} else {
 		val := uint16(cpu.reg(rt))
@@ -600,6 +604,7 @@ func (cpu *CPU) OpStoreWord(opcode uint32) {
 
 	// addresses must be 32 bit aligned
 	if addr%4 != 0 {
+		cpu.cop0.r8 = addr
 		cpu.cop0.EnterException(EXC_ADDR_ERROR_STORE, "unaligned address during sw")
 	} else {
 		val := cpu.reg(rt)
@@ -758,6 +763,7 @@ func (cpu *CPU) OpJALR(opcode uint32) {
 
 	addr := cpu.reg(rs)
 	if addr%4 != 0 {
+		cpu.cop0.r8 = addr
 		cpu.cop0.EnterException(EXC_ADDR_ERROR_LOAD, "unaligned address during jalr")
 		return
 	}

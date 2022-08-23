@@ -43,6 +43,7 @@ type Coprocessor0 struct {
 	r5  uint32 /* BDA - Breakpoint on data access (R/W) */
 	r6  uint32 /* JUMPDEST - Randomly memorized jump address (R) */
 	r7  uint32 /* DCIC - Breakpoint control (R/W) */
+	r8  uint32 /* BadVaddr - Bad Virtual Address (R) */
 	r9  uint32 /* BDAM - Data Access breakpoint mask (R/W) */
 	r11 uint32 /* BPCM - Execute breakpoint mask (R/W) */
 
@@ -68,6 +69,7 @@ func NewCoprocessor0(cpu *CPU) *Coprocessor0 {
 		0,
 		0,
 		0,
+		0,
 	}
 }
 
@@ -82,7 +84,7 @@ func (cop0 *Coprocessor0) GetRegister(reg uint32) uint32 {
 	case 7:
 		return 0 // TODO
 	case 8:
-		return 0 // TODO
+		return cop0.r8
 	case 9:
 		return 0 // TODO
 	case 11:
@@ -124,7 +126,7 @@ func (cop0 *Coprocessor0) ModifyRegister(reg uint32, v uint32) {
 }
 
 func (cop0 *Coprocessor0) EnterException(cause uint32, msg string) {
-	// fmt.Printf("[Coprocessor0::EnterException] %s\n", msg)
+	fmt.Printf("[Coprocessor0::EnterException] %s\n", msg)
 
 	var vector uint32
 	if TestBit(cop0.sr, 22) {
@@ -158,5 +160,5 @@ func (cop0 *Coprocessor0) LeaveException() {
 	var mask uint32 = 0b111111
 	mode := cop0.sr & mask
 	cop0.sr &= ^mask
-	cop0.sr |= mode >> 2
+	cop0.sr |= (mode & 0b110000) | (mode >> 2) // bits 4-5 are unchanged!!
 }
