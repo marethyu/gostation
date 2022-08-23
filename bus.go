@@ -74,16 +74,16 @@ func CPUAddressMask(i uint32) uint32 {
 
 type Bus struct {
 	Core           *GoStation
-	Ram            Access
-	Bios           Access
-	ScratchPad     Access
+	Ram            *Memory
+	Bios           *Memory
+	ScratchPad     *Memory
 	MemoryControl1 *MemoryControl1
-	SPU            Access
-	Peripheral     Access /* TODO */
-	Timer          Access /* TODO */
-	CDROM          Access /* TODO */
-	Expansion1     Access
-	Expansion2     Access /* TODO implement debug uart */
+	SPU            *Memory
+	Peripheral     *Memory /* TODO */
+	Timer          *Memory /* TODO */
+	CDROM          *Memory /* TODO */
+	Expansion1     *Memory
+	Expansion2     *Memory /* TODO implement debug uart */
 }
 
 func NewBus(core *GoStation, pathToBios string) *Bus {
