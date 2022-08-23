@@ -1,6 +1,96 @@
 package main
 
 /*
+1--2    Note: A 4 point polygon is processed internally as two 3 point
+|  |    polygons.
+3--4    Note: When drawing a polygon the GPU will not draw the right
+
+	most and bottom edge. So a (0,0)-(32,32) rectangle will actually
+
+be drawn as (0,0)-(31,31). Make sure adjoining polygons have the same
+coordinates if you want them to touch eachother!. Haven't checked how this
+works with 3 point polygons.
+
+Example argument list (quad with gouraud shading and texture blending):
+
+2CR1G1B1
+Yyy1Xxx1
+ClutV1U1
+00R2G2B2
+Yyy2Xxx2
+PageV2U2
+00R3G3B3
+Yyy3Xxx3
+0000V3U3
+00R4G4B4
+Yyy4Xxx4
+0000V4U4
+
+Format for the 16 bit 'Clut':
+
+	0-5      X coordinate X/16  (ie. in 16-halfword steps)
+	6-14     Y coordinate 0-511 (ie. in 1-line steps)
+	15       Unknown/unused (should be 0)
+
+Format for the 16 bit 'Page':
+
+	0-8    Same as GP0(E1h).Bit0-8 (see there)
+	9-10   Unused (does NOT change GP0(E1h).Bit9-10)
+	11     Same as GP0(E1h).Bit11  (see there)
+	12-13  Unused (does NOT change GP0(E1h).Bit12-13)
+	14-15  Unused (should be 0)
+*/
+func (gpu *GPU) ProcessPolygonCommand() {
+	isTextured := TestBit(gpu.shape_attr, PATTR_TEXTURE)
+	isShaded := TestBit(gpu.shape_attr, PATTR_GOURAUD)
+
+	if TestBit(gpu.shape_attr, PATTR_QUAD) {
+		if !isShaded && !isTextured {
+			gpu.ProcessMonochromeQuadCommand()
+		} else if isShaded && !isTextured {
+			gpu.ProcessShadedQuadCommand()
+		} else if !isShaded && isTextured {
+			gpu.ProcessTexturedQuadCommand()
+		} else {
+			gpu.ProcessTexturedShadedQuadCommand()
+		}
+	} else {
+		if !isShaded && !isTextured {
+			gpu.ProcessMonochromeTrigCommand()
+		} else if isShaded && !isTextured {
+			gpu.ProcessShadedTrigCommand()
+		} else if !isShaded && isTextured {
+			gpu.ProcessTexturedTrigCommand()
+		} else {
+			gpu.ProcessTexturedShadedTrigCommand()
+		}
+	}
+}
+
+/*
+Argument format:
+
+Color         ccBBGGRR    - command + color; color is ignored when textured
+Vertex        YYYYXXXX    - required, indicates the upper left corner to render
+UV            ClutVVUU    - optional, only present for textured rectangles (for 4bpp textures UU must be even!)
+Width+Height  YsizXsiz    - optional, dimensions for variable sized rectangles (max 1023x511)
+*/
+func (gpu *GPU) ProcessRectangleCommand() {
+	isTextured := TestBit(gpu.shape_attr, RATTR_TEXTURE)
+	isVariable := GetRange(gpu.shape_attr, 3, 2) == 0
+
+	if !isTextured && !isVariable {
+		gpu.ProcessMonochromeRectCommand()
+	} else if isTextured && !isVariable {
+		gpu.ProcessTexturedRectCommand()
+	} else if !isTextured && isVariable {
+		gpu.ProcessMonochromeVariableRectCommand()
+	} else {
+		gpu.ProcessTexturedVariableRectCommand()
+	}
+}
+
+/*
 Resources to learn more about textures:
 - texture section in http://hitmen.c02.at/files/docs/psx/gpu.txt
 - https://www.reddit.com/r/EmuDev/comments/fmhtcn/article_the_ps1_gpu_texture_pipeline_and_how_to/

@@ -13,29 +13,6 @@ const (
 	RSIZE_16x16           /* 3 (11) 16x16 sprite */
 )
 
-/*
-Argument format:
-
-Color         ccBBGGRR    - command + color; color is ignored when textured
-Vertex        YYYYXXXX    - required, indicates the upper left corner to render
-UV            ClutVVUU    - optional, only present for textured rectangles (for 4bpp textures UU must be even!)
-Width+Height  YsizXsiz    - optional, dimensions for variable sized rectangles (max 1023x511)
-*/
-func (gpu *GPU) ProcessRectangleCommand() {
-	isTextured := TestBit(gpu.shape_attr, RATTR_TEXTURE)
-	isVariable := GetRange(gpu.shape_attr, 3, 2) == 0
-
-	if !isTextured && !isVariable {
-		gpu.ProcessMonochromeRectCommand()
-	} else if isTextured && !isVariable {
-		gpu.ProcessTexturedRectCommand()
-	} else if !isTextured && isVariable {
-		gpu.ProcessMonochromeVariableRectCommand()
-	} else {
-		gpu.ProcessTexturedVariableRectCommand()
-	}
-}
-
 func (gpu *GPU) ProcessMonochromeRectCommand() {
 	x1 := int(ForceSignExtension16(uint16(gpu.fifo.buffer[1]&0xffff), 11))
 	y1 := int(ForceSignExtension16(uint16(gpu.fifo.buffer[1]>>16), 11))
