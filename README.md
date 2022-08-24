@@ -1,4 +1,4 @@
-# GoStation
+<img src="logo.jpg" width="160">
 
 WIP PSX emulator in Go
 
