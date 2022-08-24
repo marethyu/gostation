@@ -308,7 +308,7 @@ func (gpu *GPU) GP0(data uint32) {
 			case MODE_FillVRam:
 				gpu.GP0FillVRam()
 			case MODE_NORMAL:
-				panic("[GPU::WriteGP0] normal mode???")
+				panic("[GPU::GP0] normal mode???")
 			}
 		}
 
@@ -347,7 +347,7 @@ func (gpu *GPU) GP0(data uint32) {
 	case 0b111:
 		gpu.GP0ExecuteEnvironmentCommand(data)
 	default:
-		panic(fmt.Sprintf("[GPU::WriteGP0] Unknown command: %x", data))
+		panic(fmt.Sprintf("[GPU::GP0] Unknown command: %x", data))
 	}
 }
 
@@ -377,7 +377,7 @@ func (gpu *GPU) GP1(data uint32) {
 		0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F:
 		gpu.GP1GPUInfo(data)
 	default:
-		panic(fmt.Sprintf("[GPU::WriteGP1] Unknown command: %x", data))
+		panic(fmt.Sprintf("[GPU::GP1] Unknown command: %x", data))
 	}
 }
 
