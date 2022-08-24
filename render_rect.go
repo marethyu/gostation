@@ -36,7 +36,7 @@ func (gpu *GPU) ProcessMonochromeRectCommand() {
 		panic("[GPU::ProcessMonochromeRectCommand] ???")
 	}
 
-	gpu.DoRenderRectangle(x1, y1, x2, y2, r, g, b, 0, 0, 0, 0, gpu.shape_attr)
+	gpu.RenderRectangle(x1, y1, x2, y2, r, g, b, gpu.shape_attr)
 }
 
 func (gpu *GPU) ProcessTexturedRectCommand() {
@@ -70,7 +70,7 @@ func (gpu *GPU) ProcessTexturedRectCommand() {
 	clutX := int(GetRange(clutIndex, 0, 6) * 16)
 	clutY := int(GetRange(clutIndex, 6, 9))
 
-	gpu.DoRenderRectangle(x1, y1, x2, y2, r, g, b, u, v, clutX, clutY, gpu.shape_attr)
+	gpu.RenderTexturedRectangle(x1, y1, x2, y2, r, g, b, u, v, clutX, clutY, gpu.shape_attr)
 }
 
 func (gpu *GPU) ProcessMonochromeVariableRectCommand() {
@@ -93,7 +93,7 @@ func (gpu *GPU) ProcessMonochromeVariableRectCommand() {
 	}
 	y2 := y1 + height
 
-	gpu.DoRenderRectangle(x1, y1, x2, y2, r, g, b, 0, 0, 0, 0, gpu.shape_attr)
+	gpu.RenderRectangle(x1, y1, x2, y2, r, g, b, gpu.shape_attr)
 }
 
 func (gpu *GPU) ProcessTexturedVariableRectCommand() {
@@ -124,80 +124,69 @@ func (gpu *GPU) ProcessTexturedVariableRectCommand() {
 	clutX := int(GetRange(clutIndex, 0, 6) * 16)
 	clutY := int(GetRange(clutIndex, 6, 9))
 
-	gpu.DoRenderRectangle(x1, y1, x2, y2, r, g, b, u, v, clutX, clutY, gpu.shape_attr)
+	gpu.RenderTexturedRectangle(x1, y1, x2, y2, r, g, b, u, v, clutX, clutY, gpu.shape_attr)
 }
 
 /*
 Note: only draw from (x1,y1) to (x2-1,y2-1)
 */
-func (gpu *GPU) DoRenderRectangle(x1, y1, x2, y2, R, G, B, startU, startV, clutX, clutY int, attr uint32) {
+func (gpu *GPU) RenderTexturedRectangle(x1, y1, x2, y2, r, g, b, startU, startV, clutX, clutY int, attr uint32) {
 	isRawTexture := TestBit(attr, RATTR_RAW_TEXTURE)
 	isSemiTransparent := TestBit(attr, RATTR_SEMI_TRANSPARENT)
-	isTexture := TestBit(attr, RATTR_TEXTURE)
 
 	texPageUBase := gpu.txBase * 64
 	texPageVBase := gpu.tyBase * 256
 
-	v := startV
-
 	var uInc int = 0
-	var vInc int = 0
-
-	if isTexture {
-		if gpu.rectTextureXFlip {
-			uInc = -1
-		} else {
-			uInc = 1
-		}
-		if gpu.rectTextureYFlip {
-			vInc = -1
-		} else {
-			vInc = 1
-		}
+	if gpu.rectTextureXFlip {
+		uInc = -1
+	} else {
+		uInc = 1
 	}
+
+	var vInc int = 0
+	if gpu.rectTextureYFlip {
+		vInc = -1
+	} else {
+		vInc = 1
+	}
+
+	v := startV
 
 	for y := y1; y < y2; y += 1 {
 		u := startU
 
 		for x := x1; x < x2; x += 1 {
-			r, g, b := R, G, B
-			m := false
-			semiTransparent := isSemiTransparent
-			draw := true
+			texel := gpu.GetTexel(u, v, clutX, clutY, texPageUBase, texPageVBase, gpu.textureFormat)
 
-			if isTexture {
-				texel := gpu.GetTexel(u, v, clutX, clutY, texPageUBase, texPageVBase, gpu.textureFormat)
+			if texel > 0 {
+				tr := int(GetRange(texel, 0, 5) << 3)
+				tg := int(GetRange(texel, 5, 5) << 3)
+				tb := int(GetRange(texel, 10, 5) << 3)
+				stp := TestBit(texel, 15)
 
-				if texel > 0 {
-					tr := int(GetRange(texel, 0, 5) << 3)
-					tg := int(GetRange(texel, 5, 5) << 3)
-					tb := int(GetRange(texel, 10, 5) << 3)
-					stp := TestBit(texel, 15)
+				// TODO texture masking? no?
 
-					// TODO texture masking? no?
-
-					if isRawTexture {
-						r = tr
-						g = tg
-						b = tb
-					} else {
-						r, g, b = gpu.TextureBlend(r, g, b, tr, tg, tb)
-					}
-					m = stp
-
-					semiTransparent = semiTransparent && stp
-				} else {
-					draw = false
+				if !isRawTexture {
+					tr, tg, tb = gpu.TextureBlend(r, g, b, tr, tg, tb)
 				}
-			}
 
-			if draw {
-				gpu.PutPixel(x, y, r, g, b, m, semiTransparent, gpu.semiTransparency)
+				gpu.PutPixel(x, y, tr, tg, tb, stp, isSemiTransparent && stp, gpu.semiTransparency)
 			}
 
 			u = Modulo(u+uInc, 256)
 		}
 
 		v = Modulo(v+vInc, 256)
+	}
+}
+
+func (gpu *GPU) RenderRectangle(x1, y1, x2, y2, r, g, b int, attr uint32) {
+	isSemiTransparent := TestBit(attr, RATTR_SEMI_TRANSPARENT)
+
+	for y := y1; y < y2; y += 1 {
+		for x := x1; x < x2; x += 1 {
+			gpu.PutPixel(x, y, r, g, b, false, isSemiTransparent, gpu.semiTransparency)
+		}
 	}
 }
