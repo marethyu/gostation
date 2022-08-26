@@ -77,6 +77,8 @@ func (cpu *CPU) Step() {
 			cpu.pending_load = false
 		}
 	}
+
+	cpu.cop0.CheckInterrupts()
 }
 
 func (cpu *CPU) Log(logRegisters bool) {

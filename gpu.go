@@ -287,9 +287,9 @@ func (gpu *GPU) Read32(address uint32) uint32 {
 		return gpu.GPUREAD()
 	case 0x1f801814:
 		return gpu.GPUSTATUS()
+	default:
+		panic(fmt.Sprintf("[GPU::Read32] Invalid address: %x", address))
 	}
-
-	return 0
 }
 
 /* Nice summary here: https://psx-spx.consoledev.net/graphicsprocessingunitgpu/#gpu-command-summary */

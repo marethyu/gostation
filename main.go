@@ -40,7 +40,7 @@ func run() int {
 	defer texture.Destroy()
 
 	gopsx := NewGoStation("roms/SCPH1001.BIN")
-	gopsx.LoadExecutable("roms/tests/psxtest_cpu/psxtest_cpu.exe")
+	// gopsx.LoadExecutable("roms/tests/psxtest_cpu/psxtest_cpu.exe")
 	// gopsx.LoadExecutable("roms/tests/PSX/HelloWorld/16BPP/HelloWorld16BPP.exe")
 	// gopsx.LoadExecutable("roms/tests/PSX/GPU/16BPP/RenderTexturePolygon/CLUT4BPP/RenderTexturePolygonCLUT4BPP.exe")
 	// gopsx.LoadExecutable("roms/tests/PSX/ImageLoad/ImageLoad.exe")

@@ -26,6 +26,7 @@ https://psx-spx.consoledev.net/cpuspecifications/#cop0-exception-handling
 	0Dh-1Fh     Not used
 */
 const (
+	EXC_INTERRUPT        = 0x0
 	EXC_ADDR_ERROR_LOAD  = 0x4
 	EXC_ADDR_ERROR_STORE = 0x5
 	EXC_SYSCALL          = 0x8
@@ -161,4 +162,21 @@ func (cop0 *Coprocessor0) LeaveException() {
 	mode := cop0.sr & mask
 	cop0.sr &= ^mask
 	cop0.sr |= (mode & 0b110000) | (mode >> 2) // bits 4-5 are unchanged!!
+}
+
+/*
+https://psx-spx.consoledev.net/interrupts/#interrupt-request-execution
+
+TODO is it correct?
+*/
+func (cop0 *Coprocessor0) CheckInterrupts() {
+	ModifyBit(&cop0.cause, 10, cop0.cpu.Core.Interrupts.Pending())
+
+	status := GetRange(cop0.cause, 8, 8)
+	mask := GetRange(cop0.sr, 8, 8)
+	pending := (status & mask) != 0
+
+	if TestBit(cop0.sr, 0) && pending {
+		cop0.EnterException(EXC_INTERRUPT, "IRQ")
+	}
 }

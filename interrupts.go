@@ -9,6 +9,10 @@ const (
 	IC_SIZE   = 8
 )
 
+const (
+	IRQ_CDROM = 2
+)
+
 type Interrupts struct {
 	Core *GoStation
 
@@ -26,6 +30,14 @@ func NewInterrupts(core *GoStation) *Interrupts {
 
 func (ic *Interrupts) Contains(address uint32) bool {
 	return address >= IC_OFFSET && address < (IC_OFFSET+IC_SIZE)
+}
+
+func (ic *Interrupts) Pending() bool {
+	return (ic.Status & ic.Mask & 0xffff) != 0
+}
+
+func (ic *Interrupts) Request(interrupt int) {
+	ModifyBit(&ic.Status, interrupt, true)
 }
 
 func (ic *Interrupts) Read16(address uint32) uint16 {

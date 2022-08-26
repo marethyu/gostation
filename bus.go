@@ -81,7 +81,6 @@ type Bus struct {
 	SPU            *Memory
 	Peripheral     *Memory /* TODO */
 	Timer          *Memory /* TODO */
-	CDROM          *Memory /* TODO */
 	Expansion1     *Memory
 	Expansion2     *Memory /* TODO implement debug uart */
 }
@@ -101,7 +100,6 @@ func NewBus(core *GoStation, pathToBios string) *Bus {
 		NewMemory(make([]uint8, 640), 0x1f801c00, 640),
 		NewMemory(make([]uint8, 32), 0x1f801040, 32),
 		NewMemory(make([]uint8, 3*16), 0x1f801100, 3*16),
-		NewMemory(make([]uint8, 4), 0x1f801800, 4),
 		NewMemory(make([]uint8, 1024*512), 0x1f000000, 1024*512),
 		NewMemory(make([]uint8, 128), 0x1f802000, 128),
 	}
@@ -130,8 +128,8 @@ func (bus *Bus) Read8(address uint32) uint8 {
 		return bus.Peripheral.Read8(address)
 	}
 
-	if bus.CDROM.Contains(address) {
-		return 0
+	if bus.Core.CDROM.Contains(address) {
+		return bus.Core.CDROM.Read8(address)
 	}
 
 	if bus.Expansion1.Contains(address) {
@@ -264,7 +262,8 @@ func (bus *Bus) Write8(address uint32, data uint8) {
 		return
 	}
 
-	if bus.CDROM.Contains(address) {
+	if bus.Core.CDROM.Contains(address) {
+		bus.Core.CDROM.Write8(address, data)
 		return
 	}
 
@@ -274,6 +273,10 @@ func (bus *Bus) Write8(address uint32, data uint8) {
 	}
 
 	if bus.Expansion2.Contains(address) {
+		if address == 0x1F802041 {
+			fmt.Printf("BIOS Trace: %x\n", data)
+		}
+
 		bus.Expansion2.Write8(address, data)
 		return
 	}

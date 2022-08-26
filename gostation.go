@@ -19,6 +19,7 @@ type GoStation struct {
 	CPU        *CPU
 	GPU        *GPU
 	DMA        *DMA
+	CDROM      *CDROM
 	Interrupts *Interrupts
 
 	cycles uint64
@@ -30,6 +31,7 @@ func NewGoStation(pathToBios string) *GoStation {
 	gostation.CPU = NewCPU(&gostation)
 	gostation.GPU = NewGPU(&gostation)
 	gostation.DMA = NewDMA(&gostation)
+	gostation.CDROM = NewCDROM(&gostation)
 	gostation.Interrupts = NewInterrupts(&gostation)
 	gostation.cycles = 0
 	return &gostation
@@ -74,6 +76,7 @@ func (gostation *GoStation) Update() {
 func (gostation *GoStation) Step() {
 	gostation.CheckBIOSFunctionCalls(false)
 	gostation.CPU.Step()
+	gostation.CDROM.Step()
 	gostation.cycles += 2
 }
 

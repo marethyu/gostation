@@ -108,9 +108,9 @@ func (gpu *GPU) GetTexel(u, v, clutX, clutY, texPageUBase, texPageVBase, texForm
 		return uint32(gpu.vram.Read16(clutX+index, clutY))
 	case TEXTURE_FORMAT_15b:
 		return uint32(gpu.vram.Read16(texPageUBase+u, texPageVBase+v))
+	default:
+		panic("[GPU::GetTexel] unknown texture format!")
 	}
-
-	panic("[GPU::GetTexel] unreachable!")
 }
 
 func (gpu *GPU) TextureBlend(r, g, b, tr, tg, tb int) (int, int, int) {
