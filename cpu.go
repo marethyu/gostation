@@ -273,7 +273,7 @@ func (cpu *CPU) ExecuteCOP1Opcode(opcode uint32) {
 }
 
 func (cpu *CPU) ExecuteCOP2Opcode(opcode uint32) {
-	panic("[CPU::ExecuteCOP2Opcode] GTE is not implemented yet!")
+	fmt.Println("[CPU::ExecuteCOP2Opcode] WARNING: GTE is not implemented yet!")
 }
 
 func (cpu *CPU) ExecuteCOP3Opcode(opcode uint32) {

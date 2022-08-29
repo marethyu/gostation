@@ -57,8 +57,9 @@ func (gpu *GPU) GP0InitRenderPolygonCommand(cmd uint32) {
 	narg += 1
 
 	gpu.mode = MODE_RENDERING
-	gpu.fifo.Init(narg)
+	gpu.fifo.Reset(narg)
 	gpu.fifo.Push(cmd) // the initial command can be treated as the first argument
+	gpu.fifoActive = true
 }
 
 /*
@@ -89,8 +90,9 @@ func (gpu *GPU) GP0InitRenderRectangleCommand(cmd uint32) {
 	}
 
 	gpu.mode = MODE_RENDERING
-	gpu.fifo.Init(narg)
+	gpu.fifo.Reset(narg)
 	gpu.fifo.Push(cmd)
+	gpu.fifoActive = true
 }
 
 /*
@@ -103,8 +105,9 @@ For transferring data (like texture or palettes) from cpu to gpu's vram
 */
 func (gpu *GPU) GP0InitCPUToVRamBlit(cmd uint32) {
 	gpu.mode = MODE_CPUtoVRamBlit
-	gpu.fifo.Init(3)
+	gpu.fifo.Reset(3)
 	gpu.fifo.Push(cmd)
+	gpu.fifoActive = true
 }
 
 /*
@@ -134,8 +137,9 @@ Opposite of GPU::InitCPUToVRamBlit
 */
 func (gpu *GPU) GP0InitVramToCPUBlit(cmd uint32) {
 	gpu.mode = MODE_VramtoCPUBlit
-	gpu.fifo.Init(3)
+	gpu.fifo.Reset(3)
 	gpu.fifo.Push(cmd)
+	gpu.fifoActive = true
 }
 
 func (gpu *GPU) GP0DoVramToCPUTransfer() uint16 {
@@ -163,8 +167,9 @@ GP0(02h) - Fill Rectangle in VRAM
 */
 func (gpu *GPU) GP0InitFillRectangleVRAM(cmd uint32) {
 	gpu.mode = MODE_FillVRam
-	gpu.fifo.Init(3)
+	gpu.fifo.Reset(3)
 	gpu.fifo.Push(cmd)
+	gpu.fifoActive = true
 }
 
 func (gpu *GPU) GP0ExecuteEnvironmentCommand(cmd uint32) {
@@ -302,7 +307,6 @@ func (gpu *GPU) GP0RenderPrimitive() {
 		gpu.ProcessRectangleCommand()
 	}
 
-	gpu.fifo.Done()
 	gpu.mode = MODE_NORMAL
 }
 
@@ -328,7 +332,6 @@ func (gpu *GPU) GP0DoTransferToVRAM() {
 	gpu.imgX = 0
 	gpu.imgY = 0
 
-	gpu.fifo.Done()
 	gpu.mode = MODE_CPUtoVRamBlit
 }
 
@@ -354,7 +357,6 @@ func (gpu *GPU) GP0DoTransferFromVRAM() {
 	gpu.imgX = 0
 	gpu.imgY = 0
 
-	gpu.fifo.Done()
 	gpu.mode = MODE_VramtoCPUBlit
 }
 
@@ -391,6 +393,5 @@ func (gpu *GPU) GP0FillVRam() {
 		}
 	}
 
-	gpu.fifo.Done()
 	gpu.mode = MODE_NORMAL
 }

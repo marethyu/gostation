@@ -23,6 +23,7 @@ type GoStation struct {
 	Interrupts *Interrupts
 
 	cycles uint64
+	log    bool
 }
 
 func NewGoStation(pathToBios string) *GoStation {
@@ -67,7 +68,9 @@ func (gostation *GoStation) LoadExecutable(pathToExe string) {
 
 func (gostation *GoStation) Update() {
 	for gostation.cycles < CPU_CYCLES_PER_FRAME {
-		// gostation.CPU.Log(true)
+		if gostation.log {
+			gostation.CPU.Log(true)
+		}
 		gostation.Step()
 	}
 	gostation.cycles = 0

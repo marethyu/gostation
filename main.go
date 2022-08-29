@@ -54,9 +54,15 @@ func run() int {
 
 	for running {
 		for event = sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
-			switch event.(type) {
+			switch t := event.(type) {
 			case *sdl.QuitEvent:
 				running = false
+			case *sdl.KeyboardEvent:
+				keyCode := t.Keysym.Sym
+				if keyCode == 113 {
+					// use q to toggle cpu logging
+					gopsx.log = !gopsx.log
+				}
 			}
 		}
 

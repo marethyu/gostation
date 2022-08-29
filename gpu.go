@@ -132,8 +132,9 @@ type GPU struct {
 
 	vram *VRAM
 
-	mode int
-	fifo *FIFO
+	mode       int
+	fifo       *FIFO[uint32]
+	fifoActive bool
 
 	/* for rendering commands */
 	shape      int    /* what shape to render when FIFO finished collecting all args */
@@ -201,7 +202,8 @@ func NewGPU(core *GoStation) *GPU {
 		0,
 		NewVRAM(),
 		MODE_NORMAL,
-		NewFIFO(),
+		NewFIFO[uint32](),
+		false,
 		0,
 		0,
 		0,
@@ -294,10 +296,10 @@ func (gpu *GPU) Read32(address uint32) uint32 {
 
 /* Nice summary here: https://psx-spx.consoledev.net/graphicsprocessingunitgpu/#gpu-command-summary */
 func (gpu *GPU) GP0(data uint32) {
-	if gpu.fifo.active {
+	if gpu.fifoActive {
 		gpu.fifo.Push(data)
 
-		if gpu.fifo.done {
+		if gpu.fifo.Done() {
 			switch gpu.mode {
 			case MODE_RENDERING:
 				gpu.GP0RenderPrimitive()
@@ -310,6 +312,8 @@ func (gpu *GPU) GP0(data uint32) {
 			case MODE_NORMAL:
 				panic("[GPU::GP0] normal mode???")
 			}
+
+			gpu.fifoActive = false
 		}
 
 		return

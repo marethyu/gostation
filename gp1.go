@@ -53,7 +53,7 @@ func (gpu *GPU) GP1Reset() {
 0-23  Not used (zero)
 */
 func (gpu *GPU) GP1ResetCommandBuffer() {
-	gpu.fifo.Reset()
+	gpu.fifo.Reset(16)
 	gpu.mode = MODE_NORMAL
 	// TODO clut cache
 }
