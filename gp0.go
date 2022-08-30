@@ -382,7 +382,7 @@ func (gpu *GPU) GP0FillVRam() {
 	startX := x & 0x3f0
 	startY := y & 0x1ff
 
-	width := w & 0x3f0
+	width := (w + 0xf) & 0x3f0 // round up to a multiple of 0x10
 	height := h & 0x1ff
 
 	for y := 0; y < height; y += 1 {
