@@ -116,14 +116,10 @@ func (cdrom *CDROM) Read8(address uint32) uint8 {
 		ModifyBit(&status, 6, false) // hardcoded for now
 		ModifyBit(&status, 7, cdrom.busy)
 
-		fmt.Printf("[CDROM::Read8] status=%08b\n", status)
-
 		return uint8(status)
 	case 0x1f801801: // Response FIFO
 		if !cdrom.respFIFO.Empty() {
-			resp := cdrom.respFIFO.Pop()
-			fmt.Printf("[CDROM::Read8] response=%x\n", resp)
-			return resp
+			return cdrom.respFIFO.Pop()
 		}
 		return 0
 	case 0x1f801802: // Data FIFO
@@ -191,9 +187,33 @@ func (cdrom *CDROM) Write8(address uint32, data uint8) {
 				cdrom.paramFIFO.Reset(16)
 			}
 			cdrom.irqFlag &= ^uint32(data & 0b11111) // writing 1 will reset irq flags (it is nonsense to use values other than 07h or 1Fh?)
-			fmt.Printf("[CDROM::Write8] irqFlag=%08b\n", cdrom.irqFlag)
 		case 2: // Left-CD to Right-SPU Volume
 		case 3: // Audio Volume Apply Changes
 		}
+	}
+}
+
+/*
+https://psx-spx.consoledev.net/cdromdrive/#cdrom-test-commands-version-switches-region-chipset-scex
+*/
+func (cdrom *CDROM) CommandTest() {
+	if !cdrom.paramFIFO.Empty() {
+		arg := cdrom.paramFIFO.Pop()
+
+		switch arg {
+		case 0x20: // 19h,20h --> INT3(yy,mm,dd,ver)
+			// 94h,09h,19h,C0h  ;PSX (PU-7)               19 Sep 1994, version vC0 (a)
+			cdrom.respFIFO.Reset(4)
+			cdrom.respFIFO.Push(0x94)
+			cdrom.respFIFO.Push(0x09)
+			cdrom.respFIFO.Push(0x19)
+			cdrom.respFIFO.Push(0xc0)
+
+			cdrom.irqFlag = RESP_INT3
+		default:
+			panic(fmt.Sprintf("[CDROM::CommandTest] Unknown argument: %x", arg))
+		}
+	} else {
+		panic("[CDROM::CommandTest] Missing one argument")
 	}
 }
