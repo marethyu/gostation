@@ -111,6 +111,8 @@ func (dma *DMA) DoDMATransfer(port int) {
 			} else {
 				var data uint32
 				switch port {
+				case DMA2_GPU:
+					data = dma.Core.GPU.GPUREAD()
 				case DMA6_OTC:
 					if size == 1 {
 						// last element of the ordering table
