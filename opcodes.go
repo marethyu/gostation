@@ -265,7 +265,7 @@ func (cpu *CPU) OpLoadByte(opcode uint32) {
 	rs := int(GetRange(opcode, 21, 5))
 
 	addr := cpu.reg(rs) + imm16
-	val := SignExtendedByte(cpu.Core.Bus.Read8(addr))
+	val := SignExtendedByte(cpu.Read8(addr))
 
 	cpu.loadDelaySlotInit(rt, val)
 }
@@ -286,7 +286,7 @@ func (cpu *CPU) OpLoadHWord(opcode uint32) {
 		cpu.cop0.r8 = addr
 		cpu.cop0.EnterException(EXC_ADDR_ERROR_LOAD, "unaligned address during lh")
 	} else {
-		val := SignExtendedHWord(cpu.Core.Bus.Read16(addr))
+		val := SignExtendedHWord(cpu.Read16(addr))
 		cpu.loadDelaySlotInit(rt, val)
 	}
 }
@@ -313,7 +313,7 @@ func (cpu *CPU) OpLoadWordLeft(opcode uint32) {
 	}
 
 	mask := ^uint32(0b11) // bitmask to strip of lower two bits of the address to get aligned address
-	aligned_word := cpu.Core.Bus.Read32(addr & mask)
+	aligned_word := cpu.Read32(addr & mask)
 
 	// yea bro it's unintuitive compared to lwr but lwl instructions are frequently paired with offset (imm) of 3 for some obscure reason
 	switch addr % 4 {
@@ -381,7 +381,7 @@ func (cpu *CPU) OpLoadWord(opcode uint32) {
 		cpu.cop0.r8 = addr
 		cpu.cop0.EnterException(EXC_ADDR_ERROR_LOAD, "unaligned address during lw")
 	} else {
-		val := cpu.Core.Bus.Read32(addr)
+		val := cpu.Read32(addr)
 		cpu.loadDelaySlotInit(rt, val)
 	}
 }
@@ -396,7 +396,7 @@ func (cpu *CPU) OpLoadByteU(opcode uint32) {
 	rs := int(GetRange(opcode, 21, 5))
 
 	addr := cpu.reg(rs) + imm16
-	val := uint32(cpu.Core.Bus.Read8(addr)) // zero extended
+	val := uint32(cpu.Read8(addr)) // zero extended
 
 	cpu.loadDelaySlotInit(rt, val)
 }
@@ -417,7 +417,7 @@ func (cpu *CPU) OpLoadHWordU(opcode uint32) {
 		cpu.cop0.r8 = addr
 		cpu.cop0.EnterException(EXC_ADDR_ERROR_LOAD, "unaligned address during lhu")
 	} else {
-		val := cpu.Core.Bus.Read16(addr)
+		val := cpu.Read16(addr)
 		cpu.loadDelaySlotInit(rt, uint32(val))
 	}
 }
@@ -442,7 +442,7 @@ func (cpu *CPU) OpLoadWordRight(opcode uint32) {
 	}
 
 	mask := ^uint32(0b11) // bitmask to strip of lower two bits of the address to get aligned address
-	aligned_word := cpu.Core.Bus.Read32(addr & mask)
+	aligned_word := cpu.Read32(addr & mask)
 
 	switch addr % 4 {
 	case 0:
@@ -474,7 +474,7 @@ func (cpu *CPU) OpStoreByte(opcode uint32) {
 
 	addr := cpu.reg(rs) + imm16
 	val := uint8(cpu.reg(rt))
-	cpu.Core.Bus.Write8(addr, val)
+	cpu.Write8(addr, val)
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -499,7 +499,7 @@ func (cpu *CPU) OpStoreHWord(opcode uint32) {
 		cpu.cop0.EnterException(EXC_ADDR_ERROR_STORE, "unaligned address during sh")
 	} else {
 		val := uint16(cpu.reg(rt))
-		cpu.Core.Bus.Write16(addr, val)
+		cpu.Write16(addr, val)
 	}
 }
 
@@ -518,7 +518,7 @@ func (cpu *CPU) OpStoreWordLeft(opcode uint32) {
 
 	mask := ^uint32(0b11) // bitmask to strip of lower two bits of the address to get aligned address
 	aligned_addr := addr & mask
-	aligned_word := cpu.Core.Bus.Read32(aligned_addr)
+	aligned_word := cpu.Read32(aligned_addr)
 
 	switch addr % 4 {
 	case 0:
@@ -531,7 +531,7 @@ func (cpu *CPU) OpStoreWordLeft(opcode uint32) {
 		val = (aligned_word & 0x00000000) | (val >> 0)
 	}
 
-	cpu.Core.Bus.Write32(aligned_addr, val)
+	cpu.Write32(aligned_addr, val)
 }
 
 // 31..26 |25..21|20..16|15..11|10..6 |  5..0  |
@@ -556,7 +556,7 @@ func (cpu *CPU) OpStoreWord(opcode uint32) {
 		cpu.cop0.EnterException(EXC_ADDR_ERROR_STORE, "unaligned address during sw")
 	} else {
 		val := cpu.reg(rt)
-		cpu.Core.Bus.Write32(addr, val)
+		cpu.Write32(addr, val)
 	}
 }
 
@@ -574,7 +574,7 @@ func (cpu *CPU) OpStoreWordRight(opcode uint32) {
 
 	mask := ^uint32(0b11) // bitmask to strip of lower two bits of the address to get aligned address
 	aligned_addr := addr & mask
-	aligned_word := cpu.Core.Bus.Read32(aligned_addr)
+	aligned_word := cpu.Read32(aligned_addr)
 
 	switch addr % 4 {
 	case 0:
@@ -587,7 +587,7 @@ func (cpu *CPU) OpStoreWordRight(opcode uint32) {
 		val = (aligned_word & 0x00ffffff) | (val << 24)
 	}
 
-	cpu.Core.Bus.Write32(aligned_addr, val)
+	cpu.Write32(aligned_addr, val)
 }
 
 /*

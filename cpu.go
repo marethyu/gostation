@@ -4,6 +4,49 @@ import (
 	"fmt"
 )
 
+/*
+the mask for each region makes sure that cpu addresses (which might be virtual) map to physical memory in bus
+i is upper 3 bits of a 32 bit cpu address
+
+to help yah to see why it works...
+
+KUSEG
+>>> bin(0x00000000)
+'0b00000000000000000000000000000000'
+>>> bin(0x7fffffff)
+'0b01111111111111111111111111111111'
+
+KSEG0
+>>> bin(0x80000000)
+'0b10000000000000000000000000000000'
+>>> bin(0x9fffffff)
+'0b10011111111111111111111111111111'
+
+KSEG1
+>>> bin(0xa0000000)
+'0b10100000000000000000000000000000'
+>>> bin(0xbfffffff)
+'0b10111111111111111111111111111111'
+
+KSEG2
+>>> bin(0xc0000000)
+'0b11000000000000000000000000000000'
+>>> bin(0xffffffff)
+'0b11111111111111111111111111111111'
+*/
+func CPUAddressMask(i uint32) uint32 {
+	return []uint32{
+		// KUSEG
+		0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff,
+		// KSEG0
+		0x7fffffff,
+		// KSEG1
+		0x1fffffff,
+		// KSEG2
+		0xffffffff, 0xffffffff,
+	}[i]
+}
+
 type CPU struct {
 	Core *GoStation
 
@@ -60,7 +103,7 @@ func (cpu *CPU) Step() {
 	if cpu.current_pc%4 != 0 {
 		cpu.cop0.EnterException(EXC_ADDR_ERROR_LOAD, "misaligned pc")
 	}
-	opcode := cpu.Core.Bus.Read32(cpu.pc)
+	opcode := cpu.Read32(cpu.pc)
 
 	cpu.pc = cpu.next_pc
 	cpu.next_pc += 4
@@ -92,7 +135,7 @@ func (cpu *CPU) Log(logRegisters bool) {
 	}
 
 	fmt.Printf("[%08x]    ", cpu.pc)
-	cpu.DisassemblePrimaryOpcode(cpu.Core.Bus.Read32(cpu.pc))
+	cpu.DisassemblePrimaryOpcode(cpu.Read32(cpu.pc))
 	fmt.Println()
 }
 
@@ -308,4 +351,28 @@ func (cpu *CPU) loadDelaySlotInit(i int, v uint32) {
 func (cpu *CPU) branch(imm16 uint32) {
 	cpu.next_pc = cpu.pc + (imm16 << 2)
 	cpu.isBranch = true
+}
+
+func (cpu *CPU) Read8(address uint32) uint8 {
+	return cpu.Core.Bus.Read8(address & CPUAddressMask(address>>29))
+}
+
+func (cpu *CPU) Read16(address uint32) uint16 {
+	return cpu.Core.Bus.Read16(address & CPUAddressMask(address>>29))
+}
+
+func (cpu *CPU) Read32(address uint32) uint32 {
+	return cpu.Core.Bus.Read32(address & CPUAddressMask(address>>29))
+}
+
+func (cpu *CPU) Write8(address uint32, data uint8) {
+	cpu.Core.Bus.Write8(address&CPUAddressMask(address>>29), data)
+}
+
+func (cpu *CPU) Write16(address uint32, data uint16) {
+	cpu.Core.Bus.Write16(address&CPUAddressMask(address>>29), data)
+}
+
+func (cpu *CPU) Write32(address uint32, data uint32) {
+	cpu.Core.Bus.Write32(address&CPUAddressMask(address>>29), data)
 }

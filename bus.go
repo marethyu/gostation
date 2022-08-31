@@ -20,7 +20,7 @@ https://psx-spx.consoledev.net/memorymap/
 	      FFFE0000h (in KSEG2)     0.5K   Internal CPU control registers (Cache Control)
 
 Notes:
-- For now consider each memory segment (KUSEG, KSEG0, KSEG1) as memory mirrors
+- KUSEG is a physical memory region and KSEG0, KSEG1 and KSEG2 are virtual memory mirrors.
 - Notice that all addresses in KUSEG are smaller than KSEG0, etc.
 
 Size of KUSEG: 80000000h bytes
@@ -28,50 +28,6 @@ Size of KSEG0: 20000000h bytes (mirrored to the first 20000000h bytes in KUSEG)
 Size of KSEG1: 20000000h bytes (mirrored to the first 20000000h bytes in KUSEG)
 Size of KSEG2: 40000000h bytes
 */
-
-/*
-the mask for each region makes sure that cpu addresses map to KUSEG
-i is upper 3 bits of a 32 bit cpu address
-
-to help yah to see why it works...
-
-KUSEG
->>> bin(0x00000000)
-'0b00000000000000000000000000000000'
->>> bin(0x7fffffff)
-'0b01111111111111111111111111111111'
-
-KSEG0
->>> bin(0x80000000)
-'0b10000000000000000000000000000000'
->>> bin(0x9fffffff)
-'0b10011111111111111111111111111111'
-
-KSEG1
->>> bin(0xa0000000)
-'0b10100000000000000000000000000000'
->>> bin(0xbfffffff)
-'0b10111111111111111111111111111111'
-
-KSEG2
->>> bin(0xc0000000)
-'0b11000000000000000000000000000000'
->>> bin(0xffffffff)
-'0b11111111111111111111111111111111'
-*/
-func CPUAddressMask(i uint32) uint32 {
-	return []uint32{
-		// KUSEG
-		0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff,
-		// KSEG0
-		0x7fffffff,
-		// KSEG1
-		0x1fffffff,
-		// KSEG2
-		0xffffffff, 0xffffffff,
-	}[i]
-}
-
 type Bus struct {
 	Core           *GoStation
 	Ram            *Memory
@@ -106,8 +62,6 @@ func NewBus(core *GoStation, pathToBios string) *Bus {
 }
 
 func (bus *Bus) Read8(address uint32) uint8 {
-	address &= CPUAddressMask(address >> 29)
-
 	if bus.Bios.Contains(address) {
 		return bus.Bios.Read8(address)
 	}
@@ -144,8 +98,6 @@ func (bus *Bus) Read8(address uint32) uint8 {
 }
 
 func (bus *Bus) Read16(address uint32) uint16 {
-	address &= CPUAddressMask(address >> 29)
-
 	if bus.Bios.Contains(address) {
 		return bus.Bios.Read16(address)
 	}
@@ -186,8 +138,6 @@ func (bus *Bus) Read16(address uint32) uint16 {
 }
 
 func (bus *Bus) Read32(address uint32) uint32 {
-	address &= CPUAddressMask(address >> 29)
-
 	if bus.Bios.Contains(address) {
 		return bus.Bios.Read32(address)
 	}
@@ -240,8 +190,6 @@ TODO what to do if data width changed? e.g. writing 32 bit val then suddenly 16 
 */
 
 func (bus *Bus) Write8(address uint32, data uint8) {
-	address &= CPUAddressMask(address >> 29)
-
 	if bus.Ram.Contains(address) {
 		bus.Ram.Write8(address, data)
 		return
@@ -285,8 +233,6 @@ func (bus *Bus) Write8(address uint32, data uint8) {
 }
 
 func (bus *Bus) Write16(address uint32, data uint16) {
-	address &= CPUAddressMask(address >> 29)
-
 	if bus.Ram.Contains(address) {
 		bus.Ram.Write16(address, data)
 		return
@@ -331,8 +277,6 @@ func (bus *Bus) Write16(address uint32, data uint16) {
 }
 
 func (bus *Bus) Write32(address uint32, data uint32) {
-	address &= CPUAddressMask(address >> 29)
-
 	if bus.ScratchPad.Contains(address) {
 		bus.ScratchPad.Write32(address, data)
 		return

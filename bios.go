@@ -71,7 +71,7 @@ func BIOSPuts(gostation *GoStation) {
 	addr := BIOSFunctionArgument(gostation, 0)
 
 	for {
-		ch := gostation.Bus.Read8(addr)
+		ch := gostation.CPU.Read8(addr)
 		if ch == 0 {
 			break
 		}
@@ -90,7 +90,7 @@ func BIOSPrintf(gostation *GoStation) {
 	addr := BIOSFunctionArgument(gostation, 0)
 
 	for {
-		ch := gostation.Bus.Read8(addr)
+		ch := gostation.CPU.Read8(addr)
 		if ch == 0 {
 			break
 		}
@@ -115,5 +115,5 @@ func BIOSFunctionArgument(gostation *GoStation, arg int) uint32 {
 		return gostation.CPU.reg(arg + 4)
 	}
 
-	return gostation.Bus.Read32(gostation.CPU.reg(29) + uint32(0x10+arg*0x4))
+	return gostation.CPU.Read32(gostation.CPU.reg(29) + uint32(0x10+arg*0x4))
 }

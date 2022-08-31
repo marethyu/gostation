@@ -50,7 +50,7 @@ func (gostation *GoStation) LoadExecutable(pathToExe string) {
 	start := exe.Header.TAddr
 	size := exe.Header.TSize
 	for i := uint32(0); i < size; i += 1 {
-		gostation.Bus.Write8(start+i, exe.Data[i])
+		gostation.CPU.Write8(start+i, exe.Data[i])
 	}
 
 	gostation.CPU.pc = exe.Header.PC0

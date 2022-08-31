@@ -64,13 +64,13 @@ func (dma *DMA) DoDMATransfer(port int) {
 			// header of a packet
 			// high 8 bits defines size
 			// low 24 bits defines address to next packet or 0xffffff if last element
-			header := dma.Core.Bus.Ram.Read32(addr)
+			header := dma.Core.Bus.Read32(addr)
 
 			size := header >> 24
 
 			for size > 0 {
 				addr = (addr + 4) & mask
-				command := dma.Core.Bus.Ram.Read32(addr)
+				command := dma.Core.Bus.Read32(addr)
 
 				dma.Core.GPU.GP0(command)
 
@@ -100,7 +100,7 @@ func (dma *DMA) DoDMATransfer(port int) {
 			cur_addr := uint32(addr) & mask
 
 			if dma.channel[port].RAMToDevice {
-				data := dma.Core.Bus.Ram.Read32(cur_addr)
+				data := dma.Core.Bus.Read32(cur_addr)
 
 				switch port {
 				case DMA2_GPU:
@@ -125,7 +125,7 @@ func (dma *DMA) DoDMATransfer(port int) {
 					panic(fmt.Sprintf("[DMA::DoDMATransfer] unsupported port (%d) during device to ram block copy", port))
 				}
 
-				dma.Core.Bus.Ram.Write32(cur_addr, data)
+				dma.Core.Bus.Write32(cur_addr, data)
 			}
 
 			addr += increment
