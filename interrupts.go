@@ -10,7 +10,8 @@ const (
 )
 
 const (
-	IRQ_CDROM = 2
+	IRQ_VBLANK = 0
+	IRQ_CDROM  = 2
 )
 
 type Interrupts struct {

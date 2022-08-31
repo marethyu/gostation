@@ -67,20 +67,28 @@ func (gostation *GoStation) LoadExecutable(pathToExe string) {
 }
 
 func (gostation *GoStation) Update() {
-	for gostation.cycles < CPU_CYCLES_PER_FRAME {
-		if gostation.log {
-			gostation.CPU.Log(true)
-		}
-		gostation.Step()
+	for gostation.Step() {
 	}
-	gostation.cycles = 0
 }
 
-func (gostation *GoStation) Step() {
+func (gostation *GoStation) Step() bool {
+	if gostation.log {
+		gostation.CPU.Log(true)
+	}
+
 	gostation.CheckBIOSFunctionCalls(false)
 	gostation.CPU.Step()
 	gostation.CDROM.Step()
 	gostation.cycles += 2
+
+	if gostation.cycles == CPU_CYCLES_PER_FRAME {
+		// gostation.Interrupts.Request(IRQ_VBLANK)
+		gostation.cycles = 0
+
+		return false
+	}
+
+	return true
 }
 
 /*
