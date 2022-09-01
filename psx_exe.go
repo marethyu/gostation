@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/binary"
+	"fmt"
 	"log"
 	"os"
 	"reflect"
@@ -89,7 +90,8 @@ func NewPSXExe(pathToExe string) *PSXExecutable {
 	bytes := make([]byte, size)
 
 	if uint32(size-0x800) < header.TSize {
-		panic("[NewPSXExe] header.TSize does not agree with actual size?")
+		fmt.Println("[NewPSXExe] WARNING: header.TSize does not agree with actual size?")
+		header.TSize = uint32(size - 0x800)
 	}
 
 	bufr := bufio.NewReader(exe)
