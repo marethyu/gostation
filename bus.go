@@ -115,6 +115,10 @@ func (bus *Bus) Read16(address uint32) uint16 {
 	}
 
 	if bus.Peripheral.Contains(address) {
+		if address == 0x1f801044 {
+			return 3
+		}
+
 		return bus.Peripheral.Read16(address)
 	}
 
