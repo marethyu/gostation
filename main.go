@@ -48,7 +48,8 @@ func run() int {
 	// gopsx.LoadExecutable("roms/tests/PSX/GPU/16BPP/RenderRectangle/RenderRectangle16BPP.exe")
 	// gopsx.LoadExecutable("roms/tests/PSX/GPU/16BPP/RenderTextureRectangle/CLUT4BPP/RenderTextureRectangleCLUT4BPP.exe")
 	// gopsx.LoadExecutable("roms/tests/PSX/GPU/16BPP/RenderTextureRectangle/15BPP/RenderTextureRectangle15BPP.exe")
-	gopsx.LoadExecutable("roms/tests/PSX/Demo/PSXNICCC/PSXNICCC.exe")
+	// gopsx.LoadExecutable("roms/tests/PSX/Demo/PSXNICCC/PSXNICCC.exe")
+	gopsx.LoadExecutable("roms/tests/hello.exe")
 
 	var event sdl.Event
 	var running bool = true

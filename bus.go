@@ -154,6 +154,10 @@ func (bus *Bus) Read32(address uint32) uint32 {
 		return bus.ScratchPad.Read32(address)
 	}
 
+	if bus.MemoryControl1.Contains(address) {
+		return bus.MemoryControl1.Read32(address)
+	}
+
 	if bus.SPU.Contains(address) {
 		return bus.SPU.Read32(address)
 	}
@@ -281,6 +285,11 @@ func (bus *Bus) Write16(address uint32, data uint16) {
 }
 
 func (bus *Bus) Write32(address uint32, data uint32) {
+	if bus.Ram.Contains(address) {
+		bus.Ram.Write32(address, data)
+		return
+	}
+
 	if bus.ScratchPad.Contains(address) {
 		bus.ScratchPad.Write32(address, data)
 		return
@@ -288,11 +297,6 @@ func (bus *Bus) Write32(address uint32, data uint32) {
 
 	if bus.MemoryControl1.Contains(address) {
 		bus.MemoryControl1.Write32(address, data)
-		return
-	}
-
-	if bus.Ram.Contains(address) {
-		bus.Ram.Write32(address, data)
 		return
 	}
 

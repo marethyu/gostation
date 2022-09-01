@@ -52,6 +52,31 @@ func (mc1 *MemoryControl1) Contains(address uint32) bool {
 	return address >= MC1_OFFSET && address < (MC1_OFFSET+MC1_SIZE)
 }
 
+func (mc1 *MemoryControl1) Read32(address uint32) uint32 {
+	switch address {
+	case 0x1f801000:
+		return mc1.exp1_base_addr
+	case 0x1f801004:
+		return mc1.exp2_base_addr
+	case 0x1f801008:
+		return mc1.exp1_delay
+	case 0x1f80100c:
+		return mc1.exp3_delay
+	case 0x1f801010:
+		return mc1.bios_delay
+	case 0x1f801014:
+		return mc1.spu_delay
+	case 0x1f801018:
+		return mc1.cdrom_delay
+	case 0x1f80101c:
+		return mc1.exp2_delay
+	case 0x1f801020:
+		return mc1.common_delay
+	default:
+		panic(fmt.Sprintf("[MemoryControl1::Read32] Unknown address: %x", address))
+	}
+}
+
 func (mc1 *MemoryControl1) Write32(address uint32, data uint32) {
 	switch address {
 	case 0x1f801000:
@@ -86,8 +111,9 @@ func (mc1 *MemoryControl1) Write32(address uint32, data uint32) {
 		mc1.cdrom_delay = data
 	case 0x1f80101c:
 		if mc1.exp2_delay != data {
-			panic(fmt.Sprintf("[MemoryControl1::Write32] Bad expansion 2 delay value: %x", data))
+			// panic(fmt.Sprintf("[MemoryControl1::Write32] Bad expansion 2 delay value: %x", data))
 		}
+		mc1.exp2_delay = data
 	case 0x1f801020:
 		if data != 0x00031125 && data != 0x0000132c && data != 0x00001325 {
 			panic(fmt.Sprintf("[MemoryControl1::Write32] Bad common delay value: %x", data))
