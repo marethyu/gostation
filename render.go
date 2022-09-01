@@ -119,6 +119,10 @@ func (gpu *GPU) TextureBlend(r, g, b, tr, tg, tb int) (int, int, int) {
 }
 
 func (gpu *GPU) PutPixel(x, y, r, g, b int, m bool, semiTransparent bool, stMode int) {
+	if x < gpu.drawingAreaX1 || x > gpu.drawingAreaX2 || y < gpu.drawingAreaY1 || y > gpu.drawingAreaY2 {
+		return
+	}
+
 	if semiTransparent {
 		backp := uint32(gpu.vram.Read16(x, y))
 

@@ -14,8 +14,8 @@ const (
 )
 
 func (gpu *GPU) ProcessMonochromeRectCommand() {
-	x1 := int(ForceSignExtension16(uint16(gpu.fifo.buffer[1]&0xffff), 11))
-	y1 := int(ForceSignExtension16(uint16(gpu.fifo.buffer[1]>>16), 11))
+	x1 := int(ForceSignExtension16(uint16(gpu.fifo.buffer[1]&0xffff), 11)) + gpu.drawingXOffset
+	y1 := int(ForceSignExtension16(uint16(gpu.fifo.buffer[1]>>16), 11)) + gpu.drawingYOffset
 
 	r := int(GetRange(gpu.fifo.buffer[0], 0, 8))
 	g := int(GetRange(gpu.fifo.buffer[0], 8, 8))
@@ -40,8 +40,8 @@ func (gpu *GPU) ProcessMonochromeRectCommand() {
 }
 
 func (gpu *GPU) ProcessTexturedRectCommand() {
-	x1 := int(ForceSignExtension16(uint16(gpu.fifo.buffer[1]&0xffff), 11))
-	y1 := int(ForceSignExtension16(uint16(gpu.fifo.buffer[1]>>16), 11))
+	x1 := int(ForceSignExtension16(uint16(gpu.fifo.buffer[1]&0xffff), 11)) + gpu.drawingXOffset
+	y1 := int(ForceSignExtension16(uint16(gpu.fifo.buffer[1]>>16), 11)) + gpu.drawingYOffset
 
 	r := int(GetRange(gpu.fifo.buffer[0], 0, 8))
 	g := int(GetRange(gpu.fifo.buffer[0], 8, 8))
@@ -74,8 +74,8 @@ func (gpu *GPU) ProcessTexturedRectCommand() {
 }
 
 func (gpu *GPU) ProcessMonochromeVariableRectCommand() {
-	x1 := int(ForceSignExtension16(uint16(gpu.fifo.buffer[1]&0xffff), 11))
-	y1 := int(ForceSignExtension16(uint16(gpu.fifo.buffer[1]>>16), 11))
+	x1 := int(ForceSignExtension16(uint16(gpu.fifo.buffer[1]&0xffff), 11)) + gpu.drawingXOffset
+	y1 := int(ForceSignExtension16(uint16(gpu.fifo.buffer[1]>>16), 11)) + gpu.drawingYOffset
 
 	r := int(GetRange(gpu.fifo.buffer[0], 0, 8))
 	g := int(GetRange(gpu.fifo.buffer[0], 8, 8))
@@ -97,8 +97,8 @@ func (gpu *GPU) ProcessMonochromeVariableRectCommand() {
 }
 
 func (gpu *GPU) ProcessTexturedVariableRectCommand() {
-	x1 := int(ForceSignExtension16(uint16(gpu.fifo.buffer[1]&0xffff), 11))
-	y1 := int(ForceSignExtension16(uint16(gpu.fifo.buffer[1]>>16), 11))
+	x1 := int(ForceSignExtension16(uint16(gpu.fifo.buffer[1]&0xffff), 11)) + gpu.drawingXOffset
+	y1 := int(ForceSignExtension16(uint16(gpu.fifo.buffer[1]>>16), 11)) + gpu.drawingYOffset
 
 	r := int(GetRange(gpu.fifo.buffer[0], 0, 8))
 	g := int(GetRange(gpu.fifo.buffer[0], 8, 8))

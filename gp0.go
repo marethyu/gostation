@@ -279,11 +279,8 @@ func (gpu *GPU) GP0DrawingAreaBottomRightSet(data uint32) {
 24-31  Command  (E5h)
 */
 func (gpu *GPU) GP0DrawingOffsetSet(data uint32) {
-	x := uint16(GetRange(data, 0, 11))
-	y := uint16(GetRange(data, 11, 11))
-
-	gpu.drawingXOffset = int(ForceSignExtension16(x, 11))
-	gpu.drawingYOffset = int(ForceSignExtension16(y, 11))
+	gpu.drawingXOffset = int(ForceSignExtension16(uint16(GetRange(data, 0, 11)), 11))
+	gpu.drawingYOffset = int(ForceSignExtension16(uint16(GetRange(data, 11, 11)), 11))
 }
 
 /*

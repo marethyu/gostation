@@ -11,20 +11,20 @@ const (
 func (gpu *GPU) ProcessMonochromeQuadCommand() {
 	colour := gpu.fifo.buffer[0]
 
-	v1 := NewVertex(gpu.fifo.buffer[1], colour, 0)
-	v2 := NewVertex(gpu.fifo.buffer[2], colour, 0)
-	v3 := NewVertex(gpu.fifo.buffer[3], colour, 0)
-	v4 := NewVertex(gpu.fifo.buffer[4], colour, 0)
+	v1 := NewVertex(gpu.fifo.buffer[1], colour, 0, gpu.drawingXOffset, gpu.drawingYOffset)
+	v2 := NewVertex(gpu.fifo.buffer[2], colour, 0, gpu.drawingXOffset, gpu.drawingYOffset)
+	v3 := NewVertex(gpu.fifo.buffer[3], colour, 0, gpu.drawingXOffset, gpu.drawingYOffset)
+	v4 := NewVertex(gpu.fifo.buffer[4], colour, 0, gpu.drawingXOffset, gpu.drawingYOffset)
 
 	gpu.RenderTriangle(v1, v2, v3, gpu.semiTransparency, gpu.shape_attr, false)
 	gpu.RenderTriangle(v2, v3, v4, gpu.semiTransparency, gpu.shape_attr, true)
 }
 
 func (gpu *GPU) ProcessShadedQuadCommand() {
-	v1 := NewVertex(gpu.fifo.buffer[1], gpu.fifo.buffer[0], 0)
-	v2 := NewVertex(gpu.fifo.buffer[3], gpu.fifo.buffer[2], 0)
-	v3 := NewVertex(gpu.fifo.buffer[5], gpu.fifo.buffer[4], 0)
-	v4 := NewVertex(gpu.fifo.buffer[7], gpu.fifo.buffer[6], 0)
+	v1 := NewVertex(gpu.fifo.buffer[1], gpu.fifo.buffer[0], 0, gpu.drawingXOffset, gpu.drawingYOffset)
+	v2 := NewVertex(gpu.fifo.buffer[3], gpu.fifo.buffer[2], 0, gpu.drawingXOffset, gpu.drawingYOffset)
+	v3 := NewVertex(gpu.fifo.buffer[5], gpu.fifo.buffer[4], 0, gpu.drawingXOffset, gpu.drawingYOffset)
+	v4 := NewVertex(gpu.fifo.buffer[7], gpu.fifo.buffer[6], 0, gpu.drawingXOffset, gpu.drawingYOffset)
 
 	gpu.RenderTriangle(v1, v2, v3, gpu.semiTransparency, gpu.shape_attr, false)
 	gpu.RenderTriangle(v2, v3, v4, gpu.semiTransparency, gpu.shape_attr, true)
@@ -33,10 +33,10 @@ func (gpu *GPU) ProcessShadedQuadCommand() {
 func (gpu *GPU) ProcessTexturedQuadCommand() {
 	colour := gpu.fifo.buffer[0]
 
-	v1 := NewVertex(gpu.fifo.buffer[1], colour, gpu.fifo.buffer[2])
-	v2 := NewVertex(gpu.fifo.buffer[3], colour, gpu.fifo.buffer[4])
-	v3 := NewVertex(gpu.fifo.buffer[5], colour, gpu.fifo.buffer[6])
-	v4 := NewVertex(gpu.fifo.buffer[7], colour, gpu.fifo.buffer[8])
+	v1 := NewVertex(gpu.fifo.buffer[1], colour, gpu.fifo.buffer[2], gpu.drawingXOffset, gpu.drawingYOffset)
+	v2 := NewVertex(gpu.fifo.buffer[3], colour, gpu.fifo.buffer[4], gpu.drawingXOffset, gpu.drawingYOffset)
+	v3 := NewVertex(gpu.fifo.buffer[5], colour, gpu.fifo.buffer[6], gpu.drawingXOffset, gpu.drawingYOffset)
+	v4 := NewVertex(gpu.fifo.buffer[7], colour, gpu.fifo.buffer[8], gpu.drawingXOffset, gpu.drawingYOffset)
 
 	clutIndex := gpu.fifo.buffer[2] >> 16
 	texPage := gpu.fifo.buffer[4] >> 16
@@ -60,10 +60,10 @@ func (gpu *GPU) ProcessTexturedQuadCommand() {
 }
 
 func (gpu *GPU) ProcessTexturedShadedQuadCommand() {
-	v1 := NewVertex(gpu.fifo.buffer[1], gpu.fifo.buffer[0], gpu.fifo.buffer[2])
-	v2 := NewVertex(gpu.fifo.buffer[4], gpu.fifo.buffer[3], gpu.fifo.buffer[5])
-	v3 := NewVertex(gpu.fifo.buffer[7], gpu.fifo.buffer[6], gpu.fifo.buffer[8])
-	v4 := NewVertex(gpu.fifo.buffer[10], gpu.fifo.buffer[9], gpu.fifo.buffer[11])
+	v1 := NewVertex(gpu.fifo.buffer[1], gpu.fifo.buffer[0], gpu.fifo.buffer[2], gpu.drawingXOffset, gpu.drawingYOffset)
+	v2 := NewVertex(gpu.fifo.buffer[4], gpu.fifo.buffer[3], gpu.fifo.buffer[5], gpu.drawingXOffset, gpu.drawingYOffset)
+	v3 := NewVertex(gpu.fifo.buffer[7], gpu.fifo.buffer[6], gpu.fifo.buffer[8], gpu.drawingXOffset, gpu.drawingYOffset)
+	v4 := NewVertex(gpu.fifo.buffer[10], gpu.fifo.buffer[9], gpu.fifo.buffer[11], gpu.drawingXOffset, gpu.drawingYOffset)
 
 	clutIndex := gpu.fifo.buffer[2] >> 16
 	texPage := gpu.fifo.buffer[5] >> 16
@@ -89,17 +89,17 @@ func (gpu *GPU) ProcessTexturedShadedQuadCommand() {
 func (gpu *GPU) ProcessMonochromeTrigCommand() {
 	colour := gpu.fifo.buffer[0]
 
-	v1 := NewVertex(gpu.fifo.buffer[1], colour, 0)
-	v2 := NewVertex(gpu.fifo.buffer[2], colour, 0)
-	v3 := NewVertex(gpu.fifo.buffer[3], colour, 0)
+	v1 := NewVertex(gpu.fifo.buffer[1], colour, 0, gpu.drawingXOffset, gpu.drawingYOffset)
+	v2 := NewVertex(gpu.fifo.buffer[2], colour, 0, gpu.drawingXOffset, gpu.drawingYOffset)
+	v3 := NewVertex(gpu.fifo.buffer[3], colour, 0, gpu.drawingXOffset, gpu.drawingYOffset)
 
 	gpu.RenderTriangle(v1, v2, v3, gpu.semiTransparency, gpu.shape_attr, true)
 }
 
 func (gpu *GPU) ProcessShadedTrigCommand() {
-	v1 := NewVertex(gpu.fifo.buffer[1], gpu.fifo.buffer[0], 0)
-	v2 := NewVertex(gpu.fifo.buffer[3], gpu.fifo.buffer[2], 0)
-	v3 := NewVertex(gpu.fifo.buffer[5], gpu.fifo.buffer[4], 0)
+	v1 := NewVertex(gpu.fifo.buffer[1], gpu.fifo.buffer[0], 0, gpu.drawingXOffset, gpu.drawingYOffset)
+	v2 := NewVertex(gpu.fifo.buffer[3], gpu.fifo.buffer[2], 0, gpu.drawingXOffset, gpu.drawingYOffset)
+	v3 := NewVertex(gpu.fifo.buffer[5], gpu.fifo.buffer[4], 0, gpu.drawingXOffset, gpu.drawingYOffset)
 
 	gpu.RenderTriangle(v1, v2, v3, gpu.semiTransparency, gpu.shape_attr, true)
 }
@@ -107,9 +107,9 @@ func (gpu *GPU) ProcessShadedTrigCommand() {
 func (gpu *GPU) ProcessTexturedTrigCommand() {
 	colour := gpu.fifo.buffer[0]
 
-	v1 := NewVertex(gpu.fifo.buffer[1], colour, gpu.fifo.buffer[2])
-	v2 := NewVertex(gpu.fifo.buffer[3], colour, gpu.fifo.buffer[4])
-	v3 := NewVertex(gpu.fifo.buffer[5], colour, gpu.fifo.buffer[6])
+	v1 := NewVertex(gpu.fifo.buffer[1], colour, gpu.fifo.buffer[2], gpu.drawingXOffset, gpu.drawingYOffset)
+	v2 := NewVertex(gpu.fifo.buffer[3], colour, gpu.fifo.buffer[4], gpu.drawingXOffset, gpu.drawingYOffset)
+	v3 := NewVertex(gpu.fifo.buffer[5], colour, gpu.fifo.buffer[6], gpu.drawingXOffset, gpu.drawingYOffset)
 
 	clutIndex := gpu.fifo.buffer[2] >> 16
 	texPage := gpu.fifo.buffer[4] >> 16
@@ -132,9 +132,9 @@ func (gpu *GPU) ProcessTexturedTrigCommand() {
 }
 
 func (gpu *GPU) ProcessTexturedShadedTrigCommand() {
-	v1 := NewVertex(gpu.fifo.buffer[1], gpu.fifo.buffer[0], gpu.fifo.buffer[2])
-	v2 := NewVertex(gpu.fifo.buffer[4], gpu.fifo.buffer[3], gpu.fifo.buffer[5])
-	v3 := NewVertex(gpu.fifo.buffer[7], gpu.fifo.buffer[6], gpu.fifo.buffer[8])
+	v1 := NewVertex(gpu.fifo.buffer[1], gpu.fifo.buffer[0], gpu.fifo.buffer[2], gpu.drawingXOffset, gpu.drawingYOffset)
+	v2 := NewVertex(gpu.fifo.buffer[4], gpu.fifo.buffer[3], gpu.fifo.buffer[5], gpu.drawingXOffset, gpu.drawingYOffset)
+	v3 := NewVertex(gpu.fifo.buffer[7], gpu.fifo.buffer[6], gpu.fifo.buffer[8], gpu.drawingXOffset, gpu.drawingYOffset)
 
 	clutIndex := gpu.fifo.buffer[2] >> 16
 	texPage := gpu.fifo.buffer[5] >> 16
