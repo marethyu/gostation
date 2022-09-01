@@ -93,7 +93,7 @@ func NewCPU(core *GoStation) *CPU {
 	cpu.pending_val = 0
 	cpu.load_countdown = 0
 
-	cpu.cop0 = NewCoprocessor0(&cpu)
+	cpu.cop0 = NewCoprocessor0(&cpu, false)
 
 	return &cpu
 }

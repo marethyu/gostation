@@ -52,13 +52,15 @@ type Coprocessor0 struct {
 	sr    uint32 /* cop0r12 - SR - System status register (R/W) */
 	cause uint32 /* cop0r13 - CAUSE - (R)  Describes the most recently recognised exception */
 	epc   uint32 /* cop0r14 - EPC - Return Address from Trap (R) */
+
+	logExceptions bool
 }
 
 func (cop0 *Coprocessor0) CacheIsolated() bool {
 	return TestBit(cop0.sr, 16)
 }
 
-func NewCoprocessor0(cpu *CPU) *Coprocessor0 {
+func NewCoprocessor0(cpu *CPU, logExceptions bool) *Coprocessor0 {
 	return &Coprocessor0{
 		cpu,
 		0,
@@ -71,6 +73,7 @@ func NewCoprocessor0(cpu *CPU) *Coprocessor0 {
 		0,
 		0,
 		0,
+		logExceptions,
 	}
 }
 
@@ -127,7 +130,9 @@ func (cop0 *Coprocessor0) ModifyRegister(reg uint32, v uint32) {
 }
 
 func (cop0 *Coprocessor0) EnterException(cause uint32, msg string) {
-	fmt.Printf("[Coprocessor0::EnterException] %s\n", msg)
+	if cop0.logExceptions {
+		fmt.Printf("[Coprocessor0::EnterException] %s\n", msg)
+	}
 
 	var vector uint32
 	if TestBit(cop0.sr, 22) {
