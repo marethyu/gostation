@@ -111,7 +111,14 @@ func (cpu *CPU) Step() {
 	cpu.isDelaySlot = cpu.isBranch
 	cpu.isBranch = false
 
-	cpu.ExecutePrimaryOpcode(opcode)
+	if cpu.cop0.CheckInterrupts() {
+		// sometimes there are pending interrupts when cpu is near the end of
+		// exception handling routine (like when cpu stops at [00001010] jr r26). we don't want
+		// to set epc (which will be placed in r26) to an address inside the exception handling
+		// routine because it will cause an infinite loop
+	} else {
+		cpu.ExecutePrimaryOpcode(opcode)
+	}
 
 	if cpu.pending_load {
 		cpu.load_countdown -= 1
@@ -120,8 +127,6 @@ func (cpu *CPU) Step() {
 			cpu.pending_load = false
 		}
 	}
-
-	cpu.cop0.CheckInterrupts()
 }
 
 func (cpu *CPU) Log(logRegisters bool) {

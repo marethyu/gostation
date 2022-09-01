@@ -11,7 +11,8 @@ Timing:
 	Video Clock =  53.222400MHz (44100Hz*300h*11/7)
 */
 const (
-	CPU_CYCLES_PER_FRAME = 33868800 / 60 /* for now use NTSC mode (refresh display about 60 times per second) */
+	CPU_CYCLES_PER_SEC   = 33868800
+	CPU_CYCLES_PER_FRAME = CPU_CYCLES_PER_SEC / 60 /* for now use NTSC mode (refresh display about 60 times per second) */
 )
 
 type GoStation struct {
@@ -28,13 +29,16 @@ type GoStation struct {
 
 func NewGoStation(pathToBios string) *GoStation {
 	gostation := GoStation{}
+
 	gostation.Bus = NewBus(&gostation, pathToBios)
 	gostation.CPU = NewCPU(&gostation)
 	gostation.GPU = NewGPU(&gostation)
 	gostation.DMA = NewDMA(&gostation)
 	gostation.CDROM = NewCDROM(&gostation)
 	gostation.Interrupts = NewInterrupts(&gostation)
+
 	gostation.cycles = 0
+
 	return &gostation
 }
 
@@ -82,9 +86,8 @@ func (gostation *GoStation) Step() bool {
 	gostation.cycles += 2
 
 	if gostation.cycles == CPU_CYCLES_PER_FRAME {
-		// gostation.Interrupts.Request(IRQ_VBLANK)
+		gostation.Interrupts.Request(IRQ_VBLANK)
 		gostation.cycles = 0
-
 		return false
 	}
 

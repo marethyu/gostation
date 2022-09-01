@@ -148,10 +148,10 @@ func (cop0 *Coprocessor0) EnterException(cause uint32, msg string) {
 
 	if cop0.cpu.isDelaySlot {
 		cop0.epc = cop0.cpu.current_pc - 4
-		ModifyBit(&cop0.cause, 31, true)
 	} else {
 		cop0.epc = cop0.cpu.current_pc
 	}
+	ModifyBit(&cop0.cause, 31, cop0.cpu.isDelaySlot)
 
 	cop0.cpu.pc = vector
 	cop0.cpu.next_pc = vector + 4
@@ -166,10 +166,8 @@ func (cop0 *Coprocessor0) LeaveException() {
 
 /*
 https://psx-spx.consoledev.net/interrupts/#interrupt-request-execution
-
-TODO is it correct?
 */
-func (cop0 *Coprocessor0) CheckInterrupts() {
+func (cop0 *Coprocessor0) CheckInterrupts() bool {
 	ModifyBit(&cop0.cause, 10, cop0.cpu.Core.Interrupts.Pending())
 
 	status := GetRange(cop0.cause, 8, 8)
@@ -178,5 +176,8 @@ func (cop0 *Coprocessor0) CheckInterrupts() {
 
 	if TestBit(cop0.sr, 0) && pending {
 		cop0.EnterException(EXC_INTERRUPT, "IRQ")
+		return true
 	}
+
+	return false
 }
