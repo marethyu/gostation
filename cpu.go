@@ -112,9 +112,14 @@ func (cpu *CPU) Step() {
 	cpu.isBranch = false
 
 	if cpu.cop0.CheckInterrupts() {
-		// sometimes there are pending interrupts when cpu is near the end of
-		// exception handling routine (like when cpu stops at [00001010] jr r26). we don't want
-		// to set epc (which will be placed in r26) to an address inside the exception handling
+		// sometimes there are pending interrupts when cpu is near
+		// the end of exception handling routine
+		//
+		//	[00001010]    jr      r26  ; r26 will contain epc
+		//	[00001014]    rfe          ; branch delay slot
+		//
+		// when cpu finishes executing rfe, we don't want to set epc
+		// to an address inside the exception handling (00001010h in this example)
 		// routine because it will cause an infinite loop
 	} else {
 		cpu.ExecutePrimaryOpcode(opcode)
