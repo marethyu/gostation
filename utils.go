@@ -42,9 +42,9 @@ force sign extension on values whose bit size less than 16
 in order to get successful small value sign extension, the value must be shifted 16-bitlen bits left (making them 16 bit unsigned)
 of course, shift them back 16-bitlen bits right to get bitlen bit signed which is what we want
 */
-func ForceSignExtension16(n uint16, len int) uint16 {
+func ForceSignExtension16(n uint16, len int) int16 {
 	shift := 16 - len
-	return uint16(int16(n<<shift) >> shift)
+	return int16(n<<shift) >> shift
 }
 
 func MinOf(vars ...int) int {
