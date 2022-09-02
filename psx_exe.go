@@ -89,9 +89,10 @@ func NewPSXExe(pathToExe string) *PSXExecutable {
 	var size int64 = stats.Size()
 	bytes := make([]byte, size)
 
-	if uint32(size-0x800) < header.TSize {
+	tsize := uint32(size - 0x800)
+	if tsize < header.TSize {
 		fmt.Println("[NewPSXExe] WARNING: header.TSize does not agree with actual size?")
-		header.TSize = uint32(size - 0x800)
+		header.TSize = tsize
 	}
 
 	bufr := bufio.NewReader(exe)
