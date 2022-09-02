@@ -7,24 +7,22 @@ WIP PSX emulator in Go
 ![](psxniccc.gif)
 
 TODO:
-- Figure out how to load game rom
-- CDROM
+
+- gpu timing
 - timers
-- CPU
-  * pass amidog's psx_cpu test
-  * fix issues with load delay slots??
-  * GTE coprocessor
-- timing
-  * instruction caching
-  * Using [this](https://github.com/JaCzekanski/ps1-tests/blob/master/cpu/access-time/psx.log) as reference, implement bus waitstates
-- better DMA behaviour
-- controller input
-- more GPU commands and other obscure GPU stuff
-- optimize software renderer
-  * use fixed point arithmetic
-  * run renderer in a different thread?
-  * many other things
-- boot Crash Bandicoot
+- controllers and maybe memcards?
+- more interrupts like dma interrupts
+- more gpu stuff like dithering and texture masking
+- line rendering commands
+- gpu command mirrors
+- make hello.exe and hello2.exe work (fix double buffering and vsync issues)
+- more cdrom commands
+- gte
+- icache, dcache, and texture cache
+- pass amidog's psx_cpu test
+- using [this](https://github.com/JaCzekanski/ps1-tests/blob/master/cpu/access-time/psx.log) as reference, implement bus waitstates
+- threaded software renderer
+- add more stuff to cdrom to boot crash bandicoot
 - web server for debugging
 - wasm port
 - savestates
