@@ -22,6 +22,7 @@ TODO:
 - pass amidog's psx_cpu test
 - using [this](https://github.com/JaCzekanski/ps1-tests/blob/master/cpu/access-time/psx.log) as reference, implement bus waitstates
 - threaded software renderer
+- implement scanline-based triangle rasterizer?
 - add more stuff to cdrom to boot crash bandicoot
 - web server for debugging
 - wasm port
