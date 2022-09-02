@@ -123,6 +123,10 @@ func (bus *Bus) Read16(address uint32) uint16 {
 	}
 
 	if bus.Timer.Contains(address) {
+		if address == 0x1f801120 {
+			return 0x000016b0
+		}
+
 		return bus.Timer.Read16(address)
 	}
 
