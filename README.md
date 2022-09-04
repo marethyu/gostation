@@ -14,6 +14,7 @@ TODO:
 - more gpu stuff like dithering and texture masking
 - line rendering commands
 - gpu command mirrors
+- make a new struct `GraphicsContext` to handle all rendering stuff
 - make hello.exe and hello2.exe work (fix double buffering and vsync issues)
 - more cdrom commands
 - gte
