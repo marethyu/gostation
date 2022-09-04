@@ -8,7 +8,6 @@ WIP PSX emulator in Go
 
 TODO:
 
-- gpu timing
 - timers
 - controllers and maybe memcards?
 - more interrupts like dma interrupts

@@ -172,6 +172,16 @@ func (gpu *GPU) GP1DisplayModeSet(data uint32) {
 	if !gpu.verticalInterlace {
 		gpu.interlace = true
 	}
+
+	if gpu.PALMode {
+		gpu.videoCyclesPerScanline = VCYCLES_PER_SCANLINE_PAL
+		gpu.scanlinesPerFrame = SCANLINES_PER_FRAME_PAL
+		gpu.Core.cyclesPerFrame = CPU_CYCLES_PER_SEC / 50
+	} else {
+		gpu.videoCyclesPerScanline = VCYCLES_PER_SCANLINE_NTSC
+		gpu.scanlinesPerFrame = SCANLINES_PER_FRAME_NTSC
+		gpu.Core.cyclesPerFrame = CPU_CYCLES_PER_SEC / 60
+	}
 }
 
 /*

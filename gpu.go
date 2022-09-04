@@ -48,6 +48,13 @@ const (
 	PRIMITIVE_RECTANGLE
 )
 
+const (
+	VCYCLES_PER_SCANLINE_PAL  = 3406
+	VCYCLES_PER_SCANLINE_NTSC = 3413
+	SCANLINES_PER_FRAME_PAL   = 314
+	SCANLINES_PER_FRAME_NTSC  = 263
+)
+
 /* whut the forking fock why itz long */
 type GPU struct {
 	Core *GoStation
@@ -150,6 +157,12 @@ type GPU struct {
 	wordsLeft int
 
 	gpuReadVal uint32
+
+	/* timing stuff */
+	videoCycles            uint64
+	scanline               uint64
+	videoCyclesPerScanline uint64 /* 3406 (3413 in NTSC mode) */
+	scanlinesPerFrame      uint64 /* 263 (314 in PAL mode) */
 }
 
 func NewGPU(core *GoStation) *GPU {
@@ -214,11 +227,30 @@ func NewGPU(core *GoStation) *GPU {
 		0,
 		0,
 		0,
+		0,
+		0,
+		VCYCLES_PER_SCANLINE_NTSC,
+		SCANLINES_PER_FRAME_NTSC,
 	}
 }
 
 func (gpu *GPU) Contains(address uint32) bool {
 	return address >= GPU_OFFSET && address < (GPU_OFFSET+GPU_SIZE)
+}
+
+func (gpu *GPU) Step(cpuCycles uint64) {
+	gpu.videoCycles += cpuCycles * 11 / 7 // video clock is the cpu clock multiplied by 11/7
+
+	if gpu.videoCycles >= gpu.videoCyclesPerScanline {
+		gpu.videoCycles = 0
+
+		gpu.scanline += 1
+		if gpu.scanline == gpu.scanlinesPerFrame {
+			gpu.scanline = 0
+
+			gpu.Core.Interrupts.Request(IRQ_VBLANK)
+		}
+	}
 }
 
 /* some fields are hardcoded for now */

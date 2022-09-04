@@ -11,8 +11,7 @@ Timing:
 	Video Clock =  53.222400MHz (44100Hz*300h*11/7)
 */
 const (
-	CPU_CYCLES_PER_SEC   = 33868800
-	CPU_CYCLES_PER_FRAME = CPU_CYCLES_PER_SEC / 60 /* for now use NTSC mode (refresh display about 60 times per second) */
+	CPU_CYCLES_PER_SEC = 33868800
 )
 
 type GoStation struct {
@@ -23,8 +22,9 @@ type GoStation struct {
 	CDROM      *CDROM
 	Interrupts *Interrupts
 
-	cycles uint64
-	log    bool
+	cycles         uint64
+	cyclesPerFrame uint64
+	log            bool
 }
 
 func NewGoStation(pathToBios string) *GoStation {
@@ -38,6 +38,7 @@ func NewGoStation(pathToBios string) *GoStation {
 	gostation.Interrupts = NewInterrupts(&gostation)
 
 	gostation.cycles = 0
+	gostation.cyclesPerFrame = CPU_CYCLES_PER_SEC / 60 // NTSC mode for default
 
 	return &gostation
 }
@@ -82,11 +83,12 @@ func (gostation *GoStation) Step() bool {
 
 	gostation.CheckBIOSFunctionCalls(false)
 	gostation.CPU.Step()
+	gostation.GPU.Step(2)
 	gostation.CDROM.Step()
-	gostation.cycles += 2
 
-	if gostation.cycles == CPU_CYCLES_PER_FRAME {
-		gostation.Interrupts.Request(IRQ_VBLANK)
+	gostation.cycles += 2 // each instruction takes about 2 cycles
+
+	if gostation.cycles == gostation.cyclesPerFrame {
 		gostation.cycles = 0
 		return false
 	}
