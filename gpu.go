@@ -158,12 +158,15 @@ type GPU struct {
 
 	gpuReadVal uint32
 
-	/* timing stuff */
-	videoCycles            uint64
-	scanline               uint64
-	videoCyclesPerScanline uint64 /* 3406 (3413 in NTSC mode) */
-	scanlinesPerFrame      uint64 /* 263 (314 in PAL mode) */
-	vblank                 bool   /* currently in vblank? */
+	/* timing stuff
+	   since the video clock is the cpu clock multiplied by 11/7 and
+	   we want to avoid division as much as possible in each gpu tick so we need to multiply video cycles by 7.
+	   also it provides more accuracy. */
+	videoCyclesx7            uint64
+	scanline                 uint64
+	videoCyclesPerScanlinex7 uint64 /* 3406*7 (3413*7 in NTSC mode) */
+	scanlinesPerFrame        uint64 /* 263 (314 in PAL mode) */
+	vblank                   bool   /* currently in vblank? */
 }
 
 func NewGPU(core *GoStation) *GPU {
@@ -241,7 +244,7 @@ func (gpu *GPU) Contains(address uint32) bool {
 }
 
 func (gpu *GPU) InHblank() bool {
-	return gpu.videoCycles < gpu.displayHorizX1 || gpu.videoCycles >= gpu.displayHorizX2
+	return (gpu.videoCyclesx7/7) < gpu.displayHorizX1 || (gpu.videoCyclesx7/7) >= gpu.displayHorizX2
 }
 
 func (gpu *GPU) InVblank() bool {
@@ -249,10 +252,10 @@ func (gpu *GPU) InVblank() bool {
 }
 
 func (gpu *GPU) Step(cpuCycles uint64) {
-	gpu.videoCycles += cpuCycles * 11 / 7 // video clock is the cpu clock multiplied by 11/7
+	gpu.videoCyclesx7 += cpuCycles * 11
 
-	if gpu.videoCycles >= gpu.videoCyclesPerScanline {
-		gpu.videoCycles -= gpu.videoCyclesPerScanline
+	if gpu.videoCyclesx7 >= gpu.videoCyclesPerScanlinex7 {
+		gpu.videoCyclesx7 -= gpu.videoCyclesPerScanlinex7
 		gpu.scanline += 1
 
 		inVblank := gpu.InVblank()

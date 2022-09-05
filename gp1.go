@@ -174,11 +174,11 @@ func (gpu *GPU) GP1DisplayModeSet(data uint32) {
 	}
 
 	if gpu.PALMode {
-		gpu.videoCyclesPerScanline = VCYCLES_PER_SCANLINE_PAL
+		gpu.videoCyclesPerScanlinex7 = VCYCLES_PER_SCANLINE_PAL * 7
 		gpu.scanlinesPerFrame = SCANLINES_PER_FRAME_PAL
 		gpu.Core.cyclesPerFrame = CPU_CYCLES_PER_SEC / 50
 	} else {
-		gpu.videoCyclesPerScanline = VCYCLES_PER_SCANLINE_NTSC
+		gpu.videoCyclesPerScanlinex7 = VCYCLES_PER_SCANLINE_NTSC * 7
 		gpu.scanlinesPerFrame = SCANLINES_PER_FRAME_NTSC
 		gpu.Core.cyclesPerFrame = CPU_CYCLES_PER_SEC / 60
 	}
