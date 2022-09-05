@@ -106,8 +106,8 @@ func (gpu *GPU) GP1DisplayVRamStartSet(data uint32) {
 12-23  X2 (260h+320*8)   ;12bit       ;/relative to HSYNC
 */
 func (gpu *GPU) GP1HorizDisplayRangeSet(data uint32) {
-	gpu.displayHorizX1 = int(GetRange(data, 0, 12))
-	gpu.displayHorizX2 = int(GetRange(data, 12, 12))
+	gpu.displayHorizX1 = uint64(GetRange(data, 0, 12))
+	gpu.displayHorizX2 = uint64(GetRange(data, 12, 12))
 }
 
 /*
@@ -118,8 +118,8 @@ func (gpu *GPU) GP1HorizDisplayRangeSet(data uint32) {
 20-23 Not used (zero)
 */
 func (gpu *GPU) GP1VertDisplayRangeSet(data uint32) {
-	gpu.displayVertY1 = int(GetRange(data, 0, 10))
-	gpu.displayVertY2 = int(GetRange(data, 10, 10))
+	gpu.displayVertY1 = uint64(GetRange(data, 0, 10))
+	gpu.displayVertY2 = uint64(GetRange(data, 10, 10))
 }
 
 /*

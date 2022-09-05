@@ -130,12 +130,12 @@ type GPU struct {
 	displayVramStartY int /* 10-18 Y (0-511)     (scanline number in VRAM)   (relative to begin of VRAM) */
 
 	/* GP1(06h) - Horizontal Display range (on Screen) */
-	displayHorizX1 int /* 0-11   X1 (260h+0)       ;12bit       ;\counted in video clock units, */
-	displayHorizX2 int /* 12-23  X2 (260h+320*8)   ;12bit       ;/relative to HSYNC */
+	displayHorizX1 uint64 /* 0-11   X1 (260h+0)       ;12bit       ;\counted in video clock units, */
+	displayHorizX2 uint64 /* 12-23  X2 (260h+320*8)   ;12bit       ;/relative to HSYNC */
 
 	/* GP1(07h) - Vertical Display range (on Screen) */
-	displayVertY1 int /* 0-9   Y1 (NTSC=88h-(240/2), (PAL=A3h-(288/2))  ;\scanline numbers on screen, */
-	displayVertY2 int /* 10-19 Y2 (NTSC=88h+(240/2), (PAL=A3h+(288/2))  ;/relative to VSYNC */
+	displayVertY1 uint64 /* 0-9   Y1 (NTSC=88h-(240/2), (PAL=A3h-(288/2))  ;\scanline numbers on screen, */
+	displayVertY2 uint64 /* 10-19 Y2 (NTSC=88h+(240/2), (PAL=A3h+(288/2))  ;/relative to VSYNC */
 
 	vram *VRAM
 
@@ -163,6 +163,7 @@ type GPU struct {
 	scanline               uint64
 	videoCyclesPerScanline uint64 /* 3406 (3413 in NTSC mode) */
 	scanlinesPerFrame      uint64 /* 263 (314 in PAL mode) */
+	vblank                 bool   /* currently in vblank? */
 }
 
 func NewGPU(core *GoStation) *GPU {
@@ -209,10 +210,10 @@ func NewGPU(core *GoStation) *GPU {
 		0,
 		0,
 		0,
-		0,
-		0,
-		0,
-		0,
+		608,  // 260h
+		3168, // 260h+320*8
+		16,   // 88h-(240/2)
+		256,  // 88h+(240/2)
 		NewVRAM(),
 		MODE_NORMAL,
 		NewFIFO[uint32](),
@@ -231,6 +232,7 @@ func NewGPU(core *GoStation) *GPU {
 		0,
 		VCYCLES_PER_SCANLINE_NTSC,
 		SCANLINES_PER_FRAME_NTSC,
+		false,
 	}
 }
 
@@ -238,17 +240,30 @@ func (gpu *GPU) Contains(address uint32) bool {
 	return address >= GPU_OFFSET && address < (GPU_OFFSET+GPU_SIZE)
 }
 
+func (gpu *GPU) InHblank() bool {
+	return gpu.videoCycles < gpu.displayHorizX1 || gpu.videoCycles >= gpu.displayHorizX2
+}
+
+func (gpu *GPU) InVblank() bool {
+	return gpu.scanline < gpu.displayVertY1 || gpu.scanline >= gpu.displayVertY2
+}
+
 func (gpu *GPU) Step(cpuCycles uint64) {
 	gpu.videoCycles += cpuCycles * 11 / 7 // video clock is the cpu clock multiplied by 11/7
 
 	if gpu.videoCycles >= gpu.videoCyclesPerScanline {
-		gpu.videoCycles = 0
-
+		gpu.videoCycles -= gpu.videoCyclesPerScanline
 		gpu.scanline += 1
+
+		inVblank := gpu.InVblank()
+		if !gpu.vblank && inVblank {
+			// trigger on rising edge
+			gpu.Core.Interrupts.Request(IRQ_VBLANK)
+		}
+		gpu.vblank = inVblank
+
 		if gpu.scanline == gpu.scanlinesPerFrame {
 			gpu.scanline = 0
-
-			gpu.Core.Interrupts.Request(IRQ_VBLANK)
 		}
 	}
 }
