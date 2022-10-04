@@ -36,8 +36,6 @@ func BIOSAFunction(gostation *GoStation, r9 uint32, log bool) {
 		BIOSPutchar(gostation)
 	case 0x3e:
 		BIOSPuts(gostation)
-	case 0x3f:
-		BIOSPrintf(gostation)
 	}
 }
 
@@ -80,33 +78,6 @@ func BIOSPuts(gostation *GoStation) {
 	}
 
 	fmt.Println(sb.String())
-}
-
-/*
-https://psx-spx.consoledev.net/kernelbios/#a3fh-printftxtparam1param2etc-print-string-to-console
-*/
-func BIOSPrintf(gostation *GoStation) {
-	var sb strings.Builder
-	addr := BIOSFunctionArgument(gostation, 0)
-
-	for {
-		ch := gostation.CPU.Read8(addr)
-		if ch == 0 {
-			break
-		}
-		sb.WriteByte(ch)
-		addr += 1
-	}
-
-	txt := sb.String()
-	nargs := strings.Count(txt, "%")
-	var args []any
-
-	for i := 1; i <= nargs; i += 1 {
-		args = append(args, BIOSFunctionArgument(gostation, i))
-	}
-
-	fmt.Printf(sb.String(), args...)
 }
 
 /* Argument(s) are passed in R4,R5,R6,R7,[SP+10h],[SP+14h],etc. */

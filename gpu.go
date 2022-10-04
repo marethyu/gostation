@@ -130,12 +130,12 @@ type GPU struct {
 	displayVramStartY int /* 10-18 Y (0-511)     (scanline number in VRAM)   (relative to begin of VRAM) */
 
 	/* GP1(06h) - Horizontal Display range (on Screen) */
-	displayHorizX1 uint64 /* 0-11   X1 (260h+0)       ;12bit       ;\counted in video clock units, */
-	displayHorizX2 uint64 /* 12-23  X2 (260h+320*8)   ;12bit       ;/relative to HSYNC */
+	displayHorizX1x7 uint32 /* 0-11   X1 (260h+0)       ;12bit       ;\counted in video clock units, */
+	displayHorizX2x7 uint32 /* 12-23  X2 (260h+320*8)   ;12bit       ;/relative to HSYNC (multiplied by 7) */
 
 	/* GP1(07h) - Vertical Display range (on Screen) */
-	displayVertY1 uint64 /* 0-9   Y1 (NTSC=88h-(240/2), (PAL=A3h-(288/2))  ;\scanline numbers on screen, */
-	displayVertY2 uint64 /* 10-19 Y2 (NTSC=88h+(240/2), (PAL=A3h+(288/2))  ;/relative to VSYNC */
+	displayVertY1 uint32 /* 0-9   Y1 (NTSC=88h-(240/2), (PAL=A3h-(288/2))  ;\scanline numbers on screen, */
+	displayVertY2 uint32 /* 10-19 Y2 (NTSC=88h+(240/2), (PAL=A3h+(288/2))  ;/relative to VSYNC */
 
 	vram *VRAM
 
@@ -162,10 +162,10 @@ type GPU struct {
 	   since the video clock is the cpu clock multiplied by 11/7 and
 	   we want to avoid division as much as possible in each gpu tick so we need to multiply video cycles by 7.
 	   also it provides more accuracy. */
-	videoCyclesx7            uint64
-	scanline                 uint64
-	videoCyclesPerScanlinex7 uint64 /* 3406*7 (3413*7 in NTSC mode) */
-	scanlinesPerFrame        uint64 /* 263 (314 in PAL mode) */
+	videoCyclesx7            uint32
+	scanline                 uint32
+	videoCyclesPerScanlinex7 uint32 /* 3406*7 (3413*7 in NTSC mode) */
+	scanlinesPerFrame        uint32 /* 263 (314 in PAL mode) */
 	vblank                   bool   /* currently in vblank? */
 }
 
@@ -213,10 +213,10 @@ func NewGPU(core *GoStation) *GPU {
 		0,
 		0,
 		0,
-		608,  // 260h
-		3168, // 260h+320*8
-		16,   // 88h-(240/2)
-		256,  // 88h+(240/2)
+		608 * 7,  // 260h
+		3168 * 7, // 260h+320*8
+		16,       // 88h-(240/2)
+		256,      // 88h+(240/2)
 		NewVRAM(),
 		MODE_NORMAL,
 		NewFIFO[uint32](),
@@ -244,14 +244,14 @@ func (gpu *GPU) Contains(address uint32) bool {
 }
 
 func (gpu *GPU) InHblank() bool {
-	return (gpu.videoCyclesx7/7) < gpu.displayHorizX1 || (gpu.videoCyclesx7/7) >= gpu.displayHorizX2
+	return gpu.videoCyclesx7 < gpu.displayHorizX1x7 || gpu.videoCyclesx7 >= gpu.displayHorizX2x7
 }
 
 func (gpu *GPU) InVblank() bool {
 	return gpu.scanline < gpu.displayVertY1 || gpu.scanline >= gpu.displayVertY2
 }
 
-func (gpu *GPU) Step(cpuCycles uint64) {
+func (gpu *GPU) Step(cpuCycles uint32) {
 	gpu.videoCyclesx7 += cpuCycles * 11
 
 	if gpu.videoCyclesx7 >= gpu.videoCyclesPerScanlinex7 {

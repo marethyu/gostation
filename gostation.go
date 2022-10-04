@@ -22,8 +22,8 @@ type GoStation struct {
 	CDROM      *CDROM
 	Interrupts *Interrupts
 
-	cycles         uint64
-	cyclesPerFrame uint64
+	cycles         uint32
+	cyclesPerFrame uint32
 	log            bool
 }
 
